@@ -1,5 +1,9 @@
 # Lanes and ownership
 
+Agent names for the channel (`BRIDGE_NAME`), matching the `#project-north` convention of one lowercase word:
+`tempo` (PM), and for the three worker lanes pick names when the agents are started — suggested `pacer` (web/Mac),
+`anvil` (api/PC back-end) and `metronome` (core/PC coder). Post as `[name]`; see `docs/ORCHESTRATION.md`.
+
 | Lane | Machine | Owns (write access) | Never touches |
 |---|---|---|---|
 | **pm** (Tempo) | cloud | `docs/**`, `packages/core/src/api-types.ts`, `docs/API.md`, `docs/ENGINE-RULES.md`, `.github/**`, root configs | app internals |
@@ -32,6 +36,15 @@ else is OS-neutral TypeScript and is split so the two Windows agents never edit 
 3. **API contract tests** in `apps/api/test/contract/**` written from `api-types.ts` (auth matrix, idempotent replay, AMRAP forces RIR 0, side validation, summary shape) — the api lane makes them green.
 4. **Seed feasibility asserts** in `seed.test.ts` (week-1 and week-5 volume per muscle) so the volume caveats in `docs/ENGINE-RULES.md` are numbers, not prose.
 5. **`docs/COACH.md`**: the system prompt for the LLM coach (hit `/summary` first, then `/progression/:id` for anything flagged, propose via coaching writes, never assume acceptance) and `scripts/coach-smoke.sh`.
+
+## Handover rules between lanes
+
+- Contract changes (`packages/core/src/api-types.ts`, `docs/API.md`) and engine semantics
+  (`docs/ENGINE-RULES.md`) are `lane:pm`. Propose on the channel, tempo rules, tempo commits, then both sides
+  build against the committed text — never against the Slack message.
+- The core lane writes `apps/api/test/contract/**`; the api lane makes those tests green. Neither edits the
+  other's half.
+- Anything touching the droplet, DNS, tokens or backups is the api lane's, and needs David's say first.
 
 ## Branch and PR conventions
 

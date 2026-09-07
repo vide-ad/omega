@@ -40,7 +40,9 @@ LLM-coach API, in real use for one full mesocycle before anything fancier.
 
 ## Open questions for the user
 
-1. Which "agent-bridge"? (See `docs/ORCHESTRATION.md`.) Or go with GitHub Issues + Remote Control as recommended.
+1. Channel name for Omega and who creates it (`bridge.py create <name>` also wires the bot). Resolved: agent-bridge
+   is David's own `D:\Coding\bridge.py`; see `docs/ORCHESTRATION.md` for how each lane reaches it and why tempo
+   uses the Claude Slack connector instead.
 2. Hostname for the droplet (buy a domain vs DuckDNS). Needed before the iPhone install.
 3. Apple Watch? Decides the free Shortcuts path for cardio import.
 4. Seed volume: keep the spec's `set_delta 0,1,2,3,3` on every priority slot (quads ≈ 32 sets by week 4) or tune?
