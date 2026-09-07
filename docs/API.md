@@ -49,8 +49,8 @@ Base path: `/api/v1`. JSON in and out. Types for every request/response live in
 |---|---|---|
 | GET | `/workouts?from=&to=&exercise_id=&limit=&cursor=&include_sets=` | → `Paginated<WorkoutListItem>` newest first |
 | GET | `/workouts/:id` | → `WorkoutDetail` |
-| POST | `/workouts` | `WorkoutCreate` → `WorkoutDetail` (201). Resolves the mesocycle week for `date`, runs the progression engine per template exercise, stores `suggested_weight_kg` + the prescription JSON, links the day's readiness log if present. |
-| PATCH | `/workouts/:id` | `WorkoutPatch` → `WorkoutDetail`. Setting `completed_at` recomputes `is_compromised` (§5.2) and refreshes `progression_state` for each exercise. |
+| POST | `/workouts` | `WorkoutCreate` → `WorkoutDetail` (201). Resolves the mesocycle week for `date`, runs the progression engine per template exercise, stores the full prescription on each `workout_exercises` row (suggested weight, targets, `target_reps_by_set`, `target_tempo`, `last_set_amrap`, `reason`, `rationale`, `flags`, `constraint_notes`, `based_on_workout_id`), links the day's readiness log if present. Exercises whose prescription has `omit = true` (blocked constraint) are not added and are returned under `omitted[]`. |
+| PATCH | `/workouts/:id` | `WorkoutPatch` → `WorkoutDetail`. Setting `completed_at` recomputes `workout.is_compromised` (session rules) and each `workout_exercise.is_compromised` (pain / soreness on trained muscles) per docs/ENGINE-RULES.md, then refreshes `progression_state` for each exercise. |
 | DELETE | `/workouts/:id` | → 204 (cascades sets) |
 | POST | `/workouts/:id/exercises` | `{ exercise_id, order?, target_sets?, ... }` → `WorkoutExerciseDetail` (ad-hoc add; prescription still computed) |
 | POST | `/workouts/:id/sets` | `SetCreate` → `SetLog` (201 / 200 if id already exists) |
@@ -98,9 +98,18 @@ is the durable source of truth (the coach reads it while the phone is off). Sing
 
 ## Progression engine integration
 
-`POST /workouts` builds, per template exercise, a `PrescribeInput` from `@omega/core`:
-`history` = every prior `workout_exercise` for that exercise with its sets and the parent workout's `is_compromised`;
-`constraints` = `activeConstraintsFor(exercise, allConstraints, injuries)`; `week` = the mesocycle week for `date`;
-`state` = `progression_state` row. It stores `prescription` JSON on the `workout_exercises` row and upserts
-`progression_state` with `next_state`. When the user overrides a suggested weight in-app (logs a first working set at a
-different weight), `progression_state.working_weight_kg` is updated on completion.
+The rulebook is `docs/ENGINE-RULES.md`. `POST /workouts` builds, per template exercise, a `PrescribeInput` from `@omega/core`:
+- `history` = every prior `workout_exercise` for that exercise (any template) with its sets, the parent workout's
+  `id/date/is_compromised/completed_at`, and the row's stored `target_*`, `reason`, `is_compromised`;
+- `constraints` = `activeConstraintsFor(exercise, allConstraints, injuries)`;
+- `week` = the active mesocycle's week for `date` (null outside a block);
+- `starting_load_kg` = `progression_state.working_weight_kg` if a row exists (seeded from §9.5 restart loads, or set when the user
+  enters a starting load in-app), else null;
+- `today` = the workout date.
+
+It stores the prescription fields on the `workout_exercises` row and upserts `progression_state` with `next_state`.
+Stalls and baseline are derived from history by the engine; the API never feeds `progression_state` back except as the starting load.
+On write of a set with `is_amrap = true`, the API forces `rir = 0`. On unilateral exercises, `side` must be `left`/`right` and
+left/right sets of one pair share `set_index`; bilateral exercises use `side = 'bilateral'`.
+When a user logs a first working set at a weight different from the suggestion, nothing special happens: the next
+prescription derives from what was actually lifted (`L.weight`).

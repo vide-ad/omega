@@ -5,8 +5,9 @@ export const SEED_MESOCYCLE_ID = '0000a001-0000-4000-8000-000000000001';
 
 /**
  * Spec §9.2 — 6 weeks: 5 accumulation (set_delta 0,1,2,3,3; RIR 3,3,2,2,1) + week 6 deload
- * (volume_multiplier 0.5, RIR 4–5). `start_date` is supplied at seed time (the Monday of the
- * week containing the first session, so week boundaries line up with ISO weeks).
+ * (volume_multiplier 0.5, RIR 4–5). `start_date` is supplied at seed time and should be the
+ * FIRST TRAINING DAY of the microcycle (a Saturday for these templates): mesocycle weeks and
+ * volume weeks are 7-day blocks from this date, so Sat/Sun/Wed stay in one week.
  */
 export function buildSeedMesocycle(start_date: string): { mesocycle: Mesocycle; weeks: MesocycleWeek[] } {
   const mesocycle: Mesocycle = {

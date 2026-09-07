@@ -110,9 +110,10 @@ export interface PreviousPerformance {
 }
 
 export interface WorkoutExerciseDetail {
+  /** Carries the stored prescription fields (reason, rationale, flags, target_reps_by_set, ...). */
   workout_exercise: WorkoutExercise;
   exercise: Exercise;
-  /** Engine output at instantiation; null for ad-hoc exercises added by hand. */
+  /** The same prescription as a standalone object (convenience for clients); null for ad-hoc exercises with no engine run. */
   prescription: Prescription | null;
   /** Most recent session of this exercise before this workout (any qualification), for the "previous numbers" column. */
   previous: PreviousPerformance | null;
@@ -123,6 +124,8 @@ export interface WorkoutDetail {
   workout: Workout;
   template_name: string | null;
   exercises: WorkoutExerciseDetail[];
+  /** Template exercises left out of this session because a `blocked` constraint applies (engine `omit`). */
+  omitted: Array<{ exercise: Exercise; prescription: Prescription }>;
 }
 
 export interface WorkoutListItem extends Workout {

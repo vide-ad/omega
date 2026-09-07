@@ -40,7 +40,8 @@ export interface Exercise {
   default_rep_high: number;
   default_rir_target: number;
   default_rest_seconds: number;
-  weight_increment_kg: number;        // smallest available jump: 2.5 barbell, 2 DB, machine-specific
+  weight_increment_kg: number;        // smallest available jump: 2.5 barbell, 2 DB, machine-specific (0 = unloadable)
+  uses_bodyweight: boolean;           // weight_kg on sets is ADDED load (chin-up, dip, ab wheel)
   demo_video_url: string | null;      // self-recorded clip
   cues: string | null;                // freeform technique notes
   archived: boolean;
@@ -105,6 +106,8 @@ export interface ExerciseConstraint {
   min_reps: number | null;            // force higher-rep, lighter work
   required_tempo: string | null;      // "3-0-3-0"
   requires_clearance: boolean;        // block prescription until physio signs off
+  /** When non-null the clearance has been granted; other caps on this constraint still apply. */
+  cleared_at: string | null;
   blocked: boolean;                   // exclude entirely
   note: string | null;
 }
@@ -192,6 +195,17 @@ export interface WorkoutExercise {
   suggested_weight_kg: number | null; // written by progression engine at instantiation
   rest_seconds: number;
   notes: string | null;
+  // --- Stored prescription (engine output at instantiation; immutable history) ---
+  target_reps_by_set: number[] | null;  // per-set rep targets when reason is progress_reps
+  target_tempo: string | null;          // from an applicable constraint's required_tempo
+  last_set_amrap: boolean;
+  reason: PrescriptionReason | null;    // null for ad-hoc exercises with no engine run
+  rationale: string | null;
+  flags: PrescriptionFlag[];
+  constraint_notes: string[];
+  based_on_workout_id: string | null;   // the qualifying session (L) the decision was derived from
+  /** Exercise-level compromise cache (pain moderate/stop on any set, or soreness ≥4 on a trained muscle). Set at completion. */
+  is_compromised: boolean;
 }
 
 export type PainSeverity = 'none' | 'niggle' | 'moderate' | 'stop';
@@ -293,23 +307,25 @@ export interface ProgressionState {
 // ---------------------------------------------------------------------------
 
 export type PrescriptionReason =
-  | 'first_time'
+  | 'first_time'                // no qualifying history; suggested = starting load if one exists
+  | 'requires_clearance'        // uncleared clearance-gated constraint; stays in session, no weight
+  | 'blocked'                   // constraint excludes the exercise; API omits it from the session
   | 'deload'
   | 'progress_load'
   | 'consolidate'
   | 'progress_reps'
   | 'regress_load'
-  | 'repeat_after_compromised'
-  /** Extension to spec §5.5: an active constraint applies, so the engine is suppressed for this
-   *  exercise (constrained exercises never qualify per §5.2). Load is user/coach-managed within the cap. */
-  | 'constrained';
+  | 'repeat_after_compromised';
+
+export const PRESCRIPTION_REASONS: readonly PrescriptionReason[] = [
+  'first_time', 'requires_clearance', 'blocked', 'deload', 'progress_load', 'consolidate',
+  'progress_reps', 'regress_load', 'repeat_after_compromised',
+];
 
 export type PrescriptionFlag =
-  | 'first_time'          // no qualifying history; user must set a starting load
   | 'stall_review'        // consecutive_stalls >= 3, surface to coach
-  | 'constrained'         // an active ExerciseConstraint capped/altered this prescription
-  | 'requires_clearance'  // constraint requires physio sign-off before prescribing
-  | 'blocked';            // constraint excludes the exercise entirely
+  | 'constrained'         // an active ExerciseConstraint applies (cap / min reps / tempo); notes attached
+  | 'unloadable';         // weight_increment_kg is 0, so load cannot progress; reps do instead
 
 export interface Prescription {
   exercise_id: string;
@@ -320,12 +336,16 @@ export interface Prescription {
   target_rir: number;
   /** Per-set rep targets when the rule is `progress_reps` (spec §5.5: one more rep than achieved, per set). */
   target_reps_by_set: number[] | null;
-  required_tempo: string | null;
+  target_tempo: string | null;
+  last_set_amrap: boolean;
   reason: PrescriptionReason;
   rationale: string;
   flags: PrescriptionFlag[];
   /** Notes from any active constraint that applies (spec §3.2: surface `note` alongside the prescription). */
   constraint_notes: string[];
+  based_on_workout_id: string | null;
+  /** True when a `blocked` constraint applies: the API should not add this exercise to the session. */
+  omit: boolean;
 }
 
 // ---------------------------------------------------------------------------

@@ -26,6 +26,7 @@ interface Def {
   pattern: MovementPattern;
   unilateral?: boolean;
   lengthened?: boolean;
+  bodyweight?: boolean;
   reps: [number, number];
   rir?: number;
   rest?: number;
@@ -66,7 +67,7 @@ const DEFS: Def[] = [
     credits: { chest_upper: 1, chest_mid: 0.5, delts_front: 0.5, triceps: 0.5 } },
   { n: 22, name: 'Overhead Press', aliases: ['OHP', 'military press'], equipment: 'barbell', pattern: 'vertical_press', reps: [6, 10], rir: 2, rest: 150, incr: 2.5,
     credits: { delts_front: 1, delts_lateral: 0.5, triceps: 0.5 } },
-  { n: 23, name: 'Dip', aliases: ['dips', 'weighted dip'], equipment: 'bodyweight', pattern: 'horizontal_press', reps: [8, 12], rir: 2, rest: 150, incr: 2.5,
+  { n: 23, name: 'Dip', aliases: ['dips', 'weighted dip'], equipment: 'bodyweight', pattern: 'horizontal_press', bodyweight: true, reps: [8, 12], rir: 2, rest: 150, incr: 2.5,
     credits: { chest_mid: 1, triceps: 0.5, delts_front: 0.25 } },
   { n: 24, name: 'Cable Lateral Raise', equipment: 'cable', pattern: 'lateral_raise', lengthened: true, reps: [12, 15], rir: 1, rest: 90, incr: 2.5,
     credits: { delts_lateral: 1, delts_rear: 0.25 } },
@@ -80,7 +81,7 @@ const DEFS: Def[] = [
     credits: { triceps: 1 } },
 
   // --- Upper pull -----------------------------------------------------------
-  { n: 40, name: 'Weighted Chin-Up', aliases: ['chin-up', 'chin up', 'chins'], equipment: 'bodyweight', pattern: 'vertical_pull', reps: [6, 8], rir: 2, rest: 180, incr: 2.5,
+  { n: 40, name: 'Weighted Chin-Up', aliases: ['chin-up', 'chin up', 'chins'], equipment: 'bodyweight', pattern: 'vertical_pull', bodyweight: true, reps: [6, 8], rir: 2, rest: 180, incr: 2.5,
     cues: 'Supinated grip. Log added weight only (0 = bodyweight).',
     credits: { lats: 1, biceps: 0.5, upper_back: 0.5, brachialis: 0.25 } },
   { n: 41, name: 'Lat Pulldown', aliases: ['pulldown'], equipment: 'cable', pattern: 'vertical_pull', reps: [8, 12], rir: 2, rest: 120, incr: 5,
@@ -103,6 +104,7 @@ const DEFS: Def[] = [
     cues: 'Seated, wider grip per physio clearance.',
     credits: { biceps: 1, brachialis: 0.5 } },
   { n: 62, name: 'Bayesian Cable Curl', aliases: ['bayesian curl', 'behind-the-body cable curl'], equipment: 'cable', pattern: 'elbow_flexion', lengthened: true, reps: [10, 12], rir: 1, rest: 90, incr: 2.5,
+    cues: 'Standing. Note: the current rehab constraint says "seated only" — confirm with physio or substitute a seated curl.',
     credits: { biceps: 1, brachialis: 0.25 } },
   { n: 63, name: 'Machine Curl', aliases: ['bicep curl machine'], equipment: 'machine', pattern: 'elbow_flexion', reps: [10, 15], rir: 1, rest: 90, incr: 2.5,
     cues: 'Pre-injury working load 20 kg. Currently capped by rehab constraint.',
@@ -112,11 +114,11 @@ const DEFS: Def[] = [
     credits: { brachialis: 1, biceps: 0.5, forearms: 0.5 } },
 
   // --- Core -----------------------------------------------------------------
-  { n: 80, name: 'Ab Wheel Rollout', aliases: ['ab rollout', 'ab wheel'], equipment: 'bodyweight', pattern: 'core_antiextension', reps: [8, 12], rir: 2, rest: 90, incr: 0,
+  { n: 80, name: 'Ab Wheel Rollout', aliases: ['ab rollout', 'ab wheel'], equipment: 'bodyweight', pattern: 'core_antiextension', bodyweight: true, reps: [8, 12], rir: 2, rest: 90, incr: 0,
     credits: { core_rectus: 1, core_obliques: 0.25, lats: 0.25 } },
   { n: 81, name: 'Cable Crunch', aliases: ['kneeling cable crunch'], equipment: 'cable', pattern: 'core_flexion', reps: [12, 15], rir: 2, rest: 90, incr: 2.5,
     credits: { core_rectus: 1, core_obliques: 0.25 } },
-  { n: 82, name: 'Hanging Leg Raise', aliases: ['hanging knee raise'], equipment: 'bodyweight', pattern: 'core_flexion', reps: [10, 15], rir: 2, rest: 90, incr: 0,
+  { n: 82, name: 'Hanging Leg Raise', aliases: ['hanging knee raise'], equipment: 'bodyweight', pattern: 'core_flexion', bodyweight: true, reps: [10, 15], rir: 2, rest: 90, incr: 0,
     credits: { core_rectus: 1, core_obliques: 0.25, forearms: 0.25 } },
   { n: 83, name: 'Pallof Press', equipment: 'cable', pattern: 'core_rotation', reps: [10, 15], rir: 2, rest: 60, incr: 2.5,
     credits: { core_obliques: 1, core_rectus: 0.25 } },
@@ -145,6 +147,7 @@ export const SEED_EXERCISES: readonly Exercise[] = DEFS.map((d) => ({
   default_rir_target: d.rir ?? 2,
   default_rest_seconds: d.rest ?? 120,
   weight_increment_kg: d.incr,
+  uses_bodyweight: d.bodyweight ?? false,
   demo_video_url: null,
   cues: d.cues ?? null,
   archived: false,
