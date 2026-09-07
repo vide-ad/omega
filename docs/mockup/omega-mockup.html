@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Interactive mockup of the Omega training log: five screens on the real seed data and engine output.">
+<title>Omega Training</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Omega — single-theme by intent: this is a gym app used at 6am and under bad lighting.
+   Every colour is painted explicitly so the page holds on either host ground. */
+:root{
+  --iron-900:#0E1115;      /* page ground */
+  --iron-800:#141820;      /* phone ground */
+  --iron-700:#1A1F28;      /* surface */
+  --iron-600:#222833;      /* raised */
+  --iron-500:#2E3542;      /* hairline */
+  --chalk:#EDEAE3;         /* primary ink */
+  --chalk-dim:#B9BCC2;
+  --muted:#868C97;         /* cool grey, biased toward the brass */
+  --brass:#C8963E;         /* the engine's voice: prescriptions and rationale */
+  --brass-dim:#6B5227;
+  --moss:#5E9E6B;          /* in range */
+  --amber:#D9A441;         /* under */
+  --brick:#C4564B;         /* over / stop */
+  --slate:#7E82A6;         /* injury constraint */
+  --r:10px;
+  --f-display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --f-body:'Barlow','Helvetica Neue',Arial,sans-serif;
+  --f-mono:'IBM Plex Mono','SF Mono',Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--iron-900);color:var(--chalk);font-family:var(--f-body);
+  -webkit-font-smoothing:antialiased;font-size:15px;line-height:1.45}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ---------- page chrome ---------- */
+.page{max-width:1180px;margin:0 auto;padding:28px 20px 64px;
+  display:grid;grid-template-columns:1fr;gap:28px}
+.masthead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;
+  border-bottom:1px solid var(--iron-500);padding-bottom:16px}
+.wordmark{font-family:var(--f-display);font-weight:700;font-size:26px;letter-spacing:-.015em;margin:0}
+.masthead p{margin:0;color:var(--muted);font-size:14px;max-width:62ch}
+.tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--brass);border:1px solid var(--brass-dim);border-radius:999px;padding:3px 9px}
+.picker{display:flex;flex-wrap:wrap;gap:7px}
+.picker button{font-family:var(--f-display);font-weight:600;font-size:13px;padding:7px 13px;
+  border-radius:999px;border:1px solid var(--iron-500);color:var(--chalk-dim);background:var(--iron-700)}
+.picker button[aria-pressed="true"]{background:var(--chalk);color:var(--iron-900);border-color:var(--chalk)}
+.stage{display:grid;grid-template-columns:1fr;gap:26px;align-items:start}
+@media (min-width:900px){
+  .stage{grid-template-columns:minmax(0,1fr) 390px;gap:44px}
+  .page{padding-top:40px}
+}
+.notes h2{font-family:var(--f-display);font-size:15px;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.note{border-left:2px solid var(--iron-500);padding:0 0 0 14px;margin-bottom:18px}
+.note h3{font-family:var(--f-display);font-size:15px;margin:0 0 4px;font-weight:600}
+.note p{margin:0;color:var(--chalk-dim);font-size:14px;max-width:62ch}
+.note.key{border-left-color:var(--brass)}
+.note code{font-family:var(--f-mono);font-size:12.5px;color:var(--brass);background:var(--iron-700);
+  padding:1px 5px;border-radius:4px}
+
+/* ---------- phone ---------- */
+.phone{width:390px;max-width:100%;margin:0 auto;background:var(--iron-800);
+  border:1px solid var(--iron-500);border-radius:26px;overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;height:812px;position:relative}
+@media (max-width:899px){.phone{height:760px}}
+.status{display:flex;justify-content:space-between;align-items:center;padding:10px 20px 4px;
+  font-family:var(--f-mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
+.viewport{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 16px 96px;scrollbar-width:thin}
+.screen{display:none}
+.screen.on{display:block}
+
+/* ---------- app furniture ---------- */
+.apphead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:10px 0 16px}
+.apphead h1{font-family:var(--f-display);font-size:23px;font-weight:700;margin:0;letter-spacing:-.01em}
+.apphead .sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.pill{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+  padding:3px 8px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+.pill.week{background:var(--iron-600);color:var(--chalk-dim);border-color:var(--iron-500)}
+.pill.brass{color:var(--brass);border-color:var(--brass-dim);background:rgba(200,150,62,.09)}
+.pill.slate{color:var(--slate);border-color:#454A66;background:rgba(126,130,166,.12)}
+.pill.moss{color:var(--moss);border-color:#2F5637;background:rgba(94,158,107,.12)}
+.pill.brick{color:var(--brick);border-color:#5C2B26;background:rgba(196,86,75,.12)}
+.pill.amber{color:var(--amber);border-color:#5E4718;background:rgba(217,164,65,.12)}
+
+.card{background:var(--iron-700);border:1px solid var(--iron-500);border-radius:var(--r);
+  padding:14px;margin-bottom:12px}
+.card h3{font-family:var(--f-display);font-size:16px;margin:0;font-weight:600}
+.rowline{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.meta{font-family:var(--f-mono);font-size:12px;color:var(--muted);letter-spacing:.01em}
+.lede{font-family:var(--f-display);font-size:12px;font-weight:600;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);margin:22px 0 10px}
+
+/* start buttons */
+.start{width:100%;text-align:left;background:var(--iron-700);border:1px solid var(--iron-500);
+  border-radius:var(--r);padding:13px 14px;margin-bottom:9px;display:flex;
+  justify-content:space-between;align-items:center;gap:12px;transition:border-color .15s,background .15s}
+.start:hover,.start:active{border-color:var(--brass-dim);background:var(--iron-600)}
+.start .t{font-family:var(--f-display);font-weight:600;font-size:15.5px}
+.start .d{font-size:12.5px;color:var(--muted);margin-top:2px}
+.start .go{font-family:var(--f-mono);font-size:11px;color:var(--brass);letter-spacing:.06em}
+
+/* resume banner */
+.resume{border-color:var(--brass-dim);background:linear-gradient(180deg,rgba(200,150,62,.10),rgba(200,150,62,.03))}
+
+/* volume strip */
+.strip{display:flex;flex-direction:column;gap:9px}
+.vrow{display:grid;grid-template-columns:74px 1fr 58px;gap:9px;align-items:center}
+.vname{font-size:13px;color:var(--chalk-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{position:relative;height:8px;background:var(--iron-600);border-radius:99px;overflow:visible}
+.fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.fill.under{background:var(--amber)}.fill.in_range{background:var(--moss)}
+.fill.over{background:var(--brick)}.fill.no_target{background:#4A5160}
+.mark{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:var(--iron-500)}
+.mark.hi{background:#5B6474}
+.vnum{font-family:var(--f-mono);font-size:12px;text-align:right;color:var(--chalk-dim);
+  font-variant-numeric:tabular-nums}
+.vnum b{color:var(--chalk);font-weight:600}
+
+/* ---------- exercise card ---------- */
+.ex{background:var(--iron-700);border:1px solid var(--iron-500);border-radius:var(--r);
+  margin-bottom:12px;overflow:hidden}
+.ex.constrained{border-left:3px solid var(--slate)}
+.ex.blocked{opacity:.55}
+.ex-head{padding:13px 14px 0}
+.ex-title{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.ex-title h3{font-family:var(--f-display);font-size:16px;font-weight:600;margin:0;line-height:1.25}
+.ex-target{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);margin-top:4px;
+  font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+
+/* the engine's voice — brass */
+.presc{margin-top:11px;border-top:1px solid var(--iron-500);padding-top:10px}
+.presc-top{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
+  text-align:left;padding:0}
+.presc-w{font-family:var(--f-mono);font-size:19px;font-weight:600;color:var(--brass);
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.presc-w small{font-size:12px;font-weight:400;color:var(--brass-dim);margin-left:3px}
+.presc-w.none{color:var(--muted);font-size:14px;font-weight:500}
+.why{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);letter-spacing:.05em;
+  text-transform:uppercase;display:flex;align-items:center;gap:5px;flex-shrink:0}
+.why svg{transition:transform .2s}
+.presc[data-open="true"] .why svg{transform:rotate(180deg)}
+.rationale{display:none;margin-top:9px;font-size:13px;color:var(--chalk-dim);line-height:1.5;
+  border-left:2px solid var(--brass-dim);padding-left:10px}
+.presc[data-open="true"] .rationale{display:block}
+.rationale .prev{font-family:var(--f-mono);font-size:12px;color:var(--muted);
+  display:block;margin-top:7px;font-variant-numeric:tabular-nums}
+.cnote{margin-top:9px;font-size:12.5px;color:var(--slate);line-height:1.45;
+  background:rgba(126,130,166,.09);border-radius:6px;padding:8px 10px}
+.cnote b{color:#9CA0C4;font-weight:600}
+
+/* previous line, always visible */
+.prevline{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-top:8px;
+  font-variant-numeric:tabular-nums}
+.prevline b{color:var(--chalk-dim);font-weight:500}
+
+/* ---------- set rows ---------- */
+.sets{margin-top:12px;border-top:1px solid var(--iron-500)}
+.set{display:grid;grid-template-columns:22px 1fr 1fr auto;gap:8px;align-items:center;
+  padding:9px 14px;border-bottom:1px solid var(--iron-600)}
+.set:last-child{border-bottom:none}
+.set.done{background:rgba(94,158,107,.055)}
+.set-i{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.set-i.warm{color:var(--amber)}
+.inp{width:100%;background:var(--iron-800);border:1px solid var(--iron-500);border-radius:7px;
+  padding:9px 8px;color:var(--chalk);font-family:var(--f-mono);font-size:16px;text-align:center;
+  font-variant-numeric:tabular-nums;min-height:42px}
+.inp:focus{border-color:var(--brass);outline:none}
+.unit{font-family:var(--f-mono);font-size:10px;color:var(--muted);text-align:center;
+  letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.logged{font-family:var(--f-mono);font-size:15px;color:var(--chalk);font-variant-numeric:tabular-nums}
+.logged .sm{color:var(--muted);font-size:12px}
+
+/* RIR — one tap, inline, never a modal */
+.rir-wrap{padding:2px 14px 11px}
+.rir-lab{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.rir-lab span{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted)}
+.rir{display:flex;gap:5px}
+.rir button{flex:1;min-height:44px;border-radius:8px;background:var(--iron-800);
+  border:1px solid var(--iron-500);font-family:var(--f-mono);font-size:15px;font-weight:500;
+  color:var(--chalk-dim);transition:background .12s,border-color .12s}
+.rir button[aria-pressed="true"]{background:var(--chalk);color:var(--iron-900);border-color:var(--chalk);font-weight:600}
+.rir button.tgt::after{content:'';display:block;width:4px;height:4px;border-radius:50%;
+  background:var(--brass);margin:2px auto 0}
+.rir button[aria-pressed="true"].tgt::after{background:var(--iron-900)}
+
+/* pain — 4-state, one tap */
+.actions{display:flex;gap:8px;padding:0 14px 12px;align-items:stretch}
+.pain{flex:0 0 auto;min-width:56px;min-height:46px;border-radius:8px;border:1px solid var(--iron-500);
+  background:var(--iron-800);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;transition:all .15s}
+.pain .glyph{width:11px;height:11px;border-radius:50%;background:#5B6474}
+.pain .lbl{font-family:var(--f-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.pain[data-p="niggle"]{border-color:#5E4718;background:rgba(217,164,65,.12)}
+.pain[data-p="niggle"] .glyph{background:var(--amber)}
+.pain[data-p="niggle"] .lbl{color:var(--amber)}
+.pain[data-p="moderate"]{border-color:#6B3A1E;background:rgba(214,124,60,.14)}
+.pain[data-p="moderate"] .glyph{background:#D67C3C}
+.pain[data-p="moderate"] .lbl{color:#D67C3C}
+.pain[data-p="stop"]{border-color:#5C2B26;background:rgba(196,86,75,.16)}
+.pain[data-p="stop"] .glyph{background:var(--brick)}
+.pain[data-p="stop"] .lbl{color:var(--brick)}
+.warm-t{flex:0 0 auto;min-width:46px;min-height:46px;border-radius:8px;border:1px solid var(--iron-500);
+  background:var(--iron-800);font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.warm-t[aria-pressed="true"]{background:rgba(217,164,65,.14);border-color:#5E4718;color:var(--amber)}
+.log{flex:1;min-height:46px;border-radius:8px;background:var(--chalk);color:var(--iron-900);
+  font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.01em;
+  display:flex;align-items:center;justify-content:center;gap:7px}
+.log:active{transform:scale(.985)}
+.log.ghost{background:transparent;border:1px dashed var(--iron-500);color:var(--muted);font-weight:500}
+.painnote{margin:0 14px 12px;width:calc(100% - 28px);background:var(--iron-800);
+  border:1px solid var(--iron-500);border-radius:7px;padding:9px 10px;color:var(--chalk);
+  font-family:var(--f-body);font-size:15px;display:none}
+.painnote.on{display:block}
+
+/* ---------- rest timer ---------- */
+.timer{position:absolute;left:0;right:0;bottom:58px;background:var(--iron-600);
+  border-top:1px solid var(--brass-dim);padding:10px 16px;display:none;
+  align-items:center;gap:12px;z-index:5}
+.timer.on{display:flex}
+.timer .t{font-family:var(--f-mono);font-size:23px;font-weight:600;color:var(--brass);
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;min-width:66px}
+.timer .lab{flex:1;font-size:12px;color:var(--chalk-dim);line-height:1.3}
+.timer .lab b{display:block;font-family:var(--f-display);font-size:12px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.timer button{border:1px solid var(--iron-500);border-radius:7px;padding:8px 11px;
+  font-family:var(--f-mono);font-size:12px;color:var(--chalk-dim);background:var(--iron-700);min-height:38px}
+.tbar{position:absolute;left:0;bottom:0;height:2px;background:var(--brass);width:100%}
+
+/* ---------- bottom nav ---------- */
+.nav{position:absolute;left:0;right:0;bottom:0;height:58px;background:var(--iron-800);
+  border-top:1px solid var(--iron-500);display:grid;grid-template-columns:repeat(5,1fr);z-index:6}
+.nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-family:var(--f-display);font-size:10px;font-weight:600;letter-spacing:.03em;color:var(--muted)}
+.nav button[aria-pressed="true"]{color:var(--chalk)}
+.nav svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- readiness ---------- */
+.field{margin-bottom:15px}
+.flab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.flab span:first-child{font-family:var(--f-display);font-size:14px;font-weight:600}
+.flab span:last-child{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.scale{display:flex;gap:6px}
+.scale button{flex:1;min-height:46px;border-radius:8px;background:var(--iron-700);
+  border:1px solid var(--iron-500);font-family:var(--f-mono);font-size:15px;color:var(--chalk-dim)}
+.scale button[aria-pressed="true"]{background:var(--chalk);color:var(--iron-900);border-color:var(--chalk);font-weight:600}
+.numfield{display:flex;gap:9px}
+.numfield .inp{text-align:left;padding-left:12px}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--iron-700);border:1px solid var(--iron-500);border-radius:var(--r);padding:13px 14px}
+.toggle .tx{font-size:13.5px;color:var(--chalk-dim);max-width:26ch}
+.toggle .tx b{display:block;font-family:var(--f-display);font-size:14.5px;color:var(--chalk);font-weight:600}
+.sw{width:50px;height:29px;border-radius:99px;background:var(--iron-500);position:relative;flex-shrink:0;
+  transition:background .18s}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;
+  background:var(--chalk);transition:transform .18s}
+.sw[aria-pressed="true"]{background:var(--brick)}
+.sw[aria-pressed="true"]::after{transform:translateX(21px)}
+.save{width:100%;min-height:50px;border-radius:var(--r);background:var(--chalk);color:var(--iron-900);
+  font-family:var(--f-display);font-weight:700;font-size:15.5px;margin-top:6px}
+
+/* history */
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;
+  border-bottom:1px solid var(--iron-600)}
+.hrow .d{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+.hrow .n{font-family:var(--f-display);font-size:14.5px;font-weight:600;margin-top:2px}
+.hrow .s{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right;
+  font-variant-numeric:tabular-nums}
+.foot{color:var(--muted);font-size:12.5px;text-align:center;padding:26px 10px 8px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <h1 class="wordmark">Omega</h1>
+    <span class="tag">Interactive mockup</span>
+    <p>The training log's five screens, running on the real seed data and the real engine output. Tap the RIR chips, cycle a pain flag, log a set and watch the rest timer start. <strong style="color:var(--chalk-dim)">Every number below is example data</strong> — a second week of the seed block, not a session you've logged.</p>
+  </header>
+
+  <div class="stage">
+    <div class="notes">
+      <h2>What to look at</h2>
+      <div class="note key">
+        <h3>The brass numbers are the engine talking</h3>
+        <p>Anything in brass is a prescription, not a record. Tap <code>WHY</code> on any exercise to see the reason and the rationale — the same strings the coaching API returns. Nothing is hidden from you or from the coach.</p>
+      </div>
+      <div class="note key">
+        <h3>Bench says hold, not add</h3>
+        <p>You hit 10, 10, 10 last week — Strong would add weight. The engine holds at 42.5 kg because your mean RIR was 2 against a target of 3: the reps are there but the effort cost is still too high. Reason <code>consolidate</code>.</p>
+      </div>
+      <div class="note">
+        <h3>The injury is enforced, not remembered</h3>
+        <p>The curl is capped at 5 kg with a 15-rep floor and a 3-0-3-0 tempo, and the chin-up won't take a load at all until physio clears it. Both carry the physio's note. The engine cannot prescribe past either.</p>
+      </div>
+      <div class="note">
+        <h3>One tap per set</h3>
+        <p>RIR is a chip row with your target pre-selected, never a modal. Pain is one button cycling four states. Both sit on the row you're already touching.</p>
+      </div>
+      <div class="note">
+        <h3>Squat is unstarted on purpose</h3>
+        <p>No qualifying history and no stored starting load, so it asks rather than guessing. That's <code>first_time</code> — the one case where the engine declines to prescribe.</p>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="status">
+        <span>9:41</span>
+        <span>Sat 19 Sep · Week 2</span>
+      </div>
+
+      <div class="viewport" id="viewport">
+
+        <!-- ================= TODAY ================= -->
+        <section class="screen on" id="s-today">
+          <div class="apphead">
+            <div>
+              <h1>Saturday</h1>
+              <p class="sub">Return to training — block 1</p>
+            </div>
+            <span class="pill week">Week 2 of 6</span>
+          </div>
+
+          <button class="start resume" onclick="go('session')">
+            <span>
+              <span class="t">Day 1 — Quad + Pull</span>
+              <span class="d">In progress · 4 of 21 sets logged</span>
+            </span>
+            <span class="go">RESUME →</span>
+          </button>
+
+          <p class="lede">Readiness</p>
+          <button class="start" onclick="go('readiness')">
+            <span>
+              <span class="t">Not logged today</span>
+              <span class="d">Bodyweight, sleep, RHR, soreness · 20 seconds</span>
+            </span>
+            <span class="go">LOG →</span>
+          </button>
+
+          <p class="lede">Start a session</p>
+          <button class="start" onclick="go('session')">
+            <span><span class="t">Day 2 — Push + Isolation</span><span class="d">Sunday · 7 exercises</span></span>
+            <span class="go">START</span>
+          </button>
+          <button class="start" onclick="go('session')">
+            <span><span class="t">Day 3 — Full body top-up</span><span class="d">Wednesday · 8 exercises</span></span>
+            <span class="go">START</span>
+          </button>
+
+          <p class="lede">This week's volume</p>
+          <div class="card">
+            <div class="strip" id="strip-today"></div>
+            <div class="rowline" style="margin-top:13px">
+              <span class="meta">4 muscles under target</span>
+              <button class="go" style="font-family:var(--f-mono);font-size:11px;color:var(--brass)" onclick="go('volume')">ALL 19 →</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SESSION ================= -->
+        <section class="screen" id="s-session">
+          <div class="apphead">
+            <div>
+              <h1>Day 1 — Quad + Pull</h1>
+              <p class="sub">Week 2 · Sat 19 Sep</p>
+            </div>
+            <span class="pill week">4 / 21</span>
+          </div>
+          <div id="exlist"></div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="rowline">
+              <span>
+                <h3 style="font-size:15px">Finish session</h3>
+                <p class="meta" style="margin:3px 0 0">Session RPE and notes</p>
+              </span>
+              <span class="pill moss">4 hard sets</span>
+            </div>
+          </div>
+          <p class="foot">Excluded by an active constraint: none.<br>Two exercises are load-limited — see the slate bars.</p>
+        </section>
+
+        <!-- ================= READINESS ================= -->
+        <section class="screen" id="s-readiness">
+          <div class="apphead">
+            <div>
+              <h1>Readiness</h1>
+              <p class="sub">Saturday 19 September</p>
+            </div>
+            <span class="pill brass">~20 sec</span>
+          </div>
+
+          <div class="field">
+            <div class="numfield">
+              <div style="flex:1">
+                <div class="unit">Bodyweight kg</div>
+                <input class="inp" inputmode="decimal" value="78.4">
+              </div>
+              <div style="flex:1">
+                <div class="unit">Resting HR</div>
+                <input class="inp" inputmode="numeric" value="61">
+              </div>
+              <div style="flex:1">
+                <div class="unit">Sleep hrs</div>
+                <input class="inp" inputmode="decimal" value="7.5">
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="flab"><span>Sleep quality</span><span>1 poor — 5 great</span></div>
+            <div class="scale" data-scale="sleepq"></div>
+          </div>
+          <div class="field">
+            <div class="flab"><span>Stress</span><span>1 low — 5 high</span></div>
+            <div class="scale" data-scale="stress"></div>
+          </div>
+          <div class="field">
+            <div class="flab"><span>Motivation</span><span>1 low — 5 high</span></div>
+            <div class="scale" data-scale="motivation"></div>
+          </div>
+
+          <p class="lede">Soreness · trained in the last 48h</p>
+          <div class="field">
+            <div class="flab"><span>Quads</span><span class="meta">Squat, leg extension</span></div>
+            <div class="scale" data-scale="sore-quads"></div>
+          </div>
+          <div class="field">
+            <div class="flab"><span>Lats</span><span class="meta">Chin-up</span></div>
+            <div class="scale" data-scale="sore-lats"></div>
+          </div>
+          <div class="field">
+            <div class="flab"><span>Lateral delts</span><span class="meta">Cable lateral raise</span></div>
+            <div class="scale" data-scale="sore-delts"></div>
+          </div>
+
+          <div class="toggle" style="margin-bottom:14px">
+            <span class="tx"><b>Today was rough</b>Excludes this session from progression decisions</span>
+            <button class="sw" aria-pressed="false" aria-label="Today was rough"
+              onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed')==='true'?'false':'true')"></button>
+          </div>
+          <button class="save">Save readiness</button>
+          <p class="foot">Sleep under 5.5h, an RHR more than 7 above your 30-day median, or this toggle marks the day compromised — the engine then repeats your last good prescription instead of reading the dip as a regression.</p>
+        </section>
+
+        <!-- ================= VOLUME ================= -->
+        <section class="screen" id="s-volume">
+          <div class="apphead">
+            <div>
+              <h1>Volume</h1>
+              <p class="sub">Hard sets per muscle</p>
+            </div>
+            <span class="pill week">Week 2 · partial</span>
+          </div>
+          <div class="card">
+            <div class="rowline" style="margin-bottom:12px">
+              <span class="meta">13–19 SEP · MESOCYCLE WEEK 2</span>
+              <span class="pill amber">4 under</span>
+            </div>
+            <div class="strip" id="strip-full"></div>
+          </div>
+          <p class="foot">A hard set is a working set taken to RIR 4 or below. Fractional credits: a chin-up is 1.0 to lats and 0.5 to biceps, so three chin-ups read as 1.5 biceps sets. Left and right of a unilateral pair count once.</p>
+        </section>
+
+        <!-- ================= HISTORY ================= -->
+        <section class="screen" id="s-history">
+          <div class="apphead">
+            <div>
+              <h1>History</h1>
+              <p class="sub">7 sessions · block 1</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="hrow">
+              <span><span class="d">SAT 19 SEP</span><div class="n">Day 1 — Quad + Pull</div></span>
+              <span class="s">4 sets<br><span style="color:var(--brass)">in progress</span></span>
+            </div>
+            <div class="hrow">
+              <span><span class="d">WED 16 SEP</span><div class="n">Day 3 — Full body top-up</div></span>
+              <span class="s">22 sets</span>
+            </div>
+            <div class="hrow">
+              <span><span class="d">SUN 14 SEP</span><div class="n">Day 2 — Push + Isolation</div>
+                <span class="pill brick" style="margin-top:5px;display:inline-block">Compromised · sleep 4.5h</span></span>
+              <span class="s">18 sets</span>
+            </div>
+            <div class="hrow">
+              <span><span class="d">SAT 12 SEP</span><div class="n">Day 1 — Quad + Pull</div></span>
+              <span class="s">21 sets</span>
+            </div>
+            <div class="hrow" style="border-bottom:none">
+              <span><span class="d">WED 09 SEP</span><div class="n">Day 3 — Full body top-up</div></span>
+              <span class="s">20 sets</span>
+            </div>
+          </div>
+          <p class="foot">The 14 Sep session is marked compromised, so its numbers set no baseline and trigger no regression. The engine skipped it and read 12 Sep instead.</p>
+        </section>
+      </div>
+
+      <!-- rest timer -->
+      <div class="timer" id="timer">
+        <span class="t" id="tclock">2:30</span>
+        <span class="lab"><b>Rest</b><span id="tlabel">Flat Barbell Bench Press · set 3</span></span>
+        <button onclick="addTime()">+30s</button>
+        <button onclick="stopTimer()">Skip</button>
+        <span class="tbar" id="tbar"></span>
+      </div>
+
+      <!-- bottom nav -->
+      <nav class="nav">
+        <button aria-pressed="true" data-nav="today" onclick="go('today')">
+          <svg viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Today</button>
+        <button aria-pressed="false" data-nav="session" onclick="go('session')">
+          <svg viewBox="0 0 24 24"><path d="M6.5 9v6M17.5 9v6M3.5 10.5v3M20.5 10.5v3M6.5 12h11"/></svg>Session</button>
+        <button aria-pressed="false" data-nav="readiness" onclick="go('readiness')">
+          <svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2.5-6 1.5 3h5"/></svg>Ready</button>
+        <button aria-pressed="false" data-nav="volume" onclick="go('volume')">
+          <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Volume</button>
+        <button aria-pressed="false" data-nav="history" onclick="go('history')">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>History</button>
+      </nav>
+    </div>
+  </div>
+
+  <p class="foot" style="max-width:70ch;margin:0 auto">
+    Mockup of the built app — <code style="font-family:var(--f-mono);color:var(--brass)">vide-ad/omega</code>,
+    branch <code style="font-family:var(--f-mono);color:var(--brass)">claude/training-app-mvp-eymz5h</code>.
+    Prescriptions, rationale strings and volume credits are the real engine's output; the sessions behind them are invented.
+  </p>
+</div>
+
+<script>
+/* ---------------- data: the real Day 1 slate, week 2 ---------------- */
+const EX = [
+  { id:'squat', name:'Barbell Back Squat', sets:5, lo:6, hi:8, rir:3, rest:180, incr:2.5,
+    reason:'first_time', w:null,
+    rationale:'No qualifying history yet — set a starting load.',
+    prev:null, logged:[] },
+
+  { id:'chin', name:'Weighted Chin-Up', sets:4, lo:6, hi:8, rir:3, rest:180, incr:2.5,
+    reason:'requires_clearance', w:null, constrained:true,
+    rationale:'Held pending physio clearance: no load prescribed until the constraint is cleared. Sets may still be logged.',
+    cnote:'Bodyweight chin-ups are a far heavier elbow-flexion load than rehab curls. Confirm with physio before reintroducing.',
+    prev:null, logged:[] },
+
+  { id:'legext', name:'Leg Extension', sets:4, lo:10, hi:12, rir:3, rest:120, incr:5,
+    reason:'progress_load', w:45,
+    rationale:'Last qualifying session 12 Sep: 40 kg × 12, 12, 12 at mean RIR 3 (target 3, range 10–12). Every set reached the top of the range with effort in hand → +5 kg to 45 kg, reset to 10 reps.',
+    prev:'40 kg × 12, 12, 12 @ RIR 3', logged:[] },
+
+  { id:'curl', name:'Incline Dumbbell Curl', sets:4, lo:15, hi:15, rir:3, rest:90, incr:1,
+    reason:'constrained', w:5, tempo:'3-0-3-0', constrained:true,
+    rationale:'No qualifying history yet. Starting load 5 kg from the stored starting load. Injury constraint applies: starting at the 5 kg cap, minimum 15 reps, tempo 3-0-3-0.',
+    cnote:'Rehab phase. Seated only, avoid narrow grip. Escalate ~1 kg per 2 pain-free weeks. Stop on any tingling or numbness.',
+    prev:null, logged:[] },
+
+  { id:'lat', name:'Cable Lateral Raise', sets:5, lo:12, hi:15, rir:3, rest:90, incr:2.5,
+    reason:'progress_reps', w:7.5, bySet:[14,14,13,12,12],
+    rationale:'Last qualifying session 12 Sep: 7.5 kg × 13, 13, 12, 11 at mean RIR 3 (target 3, range 12–15). Not every set reached the top of the range → hold 7.5 kg and target one more rep per set (14, 14, 13, 12).',
+    prev:'7.5 kg × 13, 13, 12, 11 @ RIR 3', logged:[] },
+
+  { id:'bench', name:'Flat Barbell Bench Press', sets:3, lo:8, hi:10, rir:3, rest:150, incr:2.5,
+    reason:'consolidate', w:42.5,
+    rationale:'Last qualifying session 12 Sep: 42.5 kg × 10, 10, 10 at mean RIR 2 (target 3, range 8–10). Reps are there but mean RIR 2 is under the target 3 → hold 42.5 kg and the same reps until effort drops.',
+    prev:'42.5 kg × 10, 10, 10 @ RIR 2',
+    logged:[{w:42.5,r:10,rir:3},{w:42.5,r:10,rir:3}] },
+
+  { id:'abwheel', name:'Ab Wheel Rollout', sets:3, lo:8, hi:12, rir:3, rest:90, incr:0,
+    reason:'progress_reps', w:0, unloadable:true, bySet:[11,11,11],
+    rationale:'Last qualifying session 12 Sep: bodyweight × 10, 10, 10 at mean RIR 3 (target 3, range 8–12). Every set reached the top of the range but this exercise has no load increment → add a rep per set (11, 11, 11).',
+    prev:'Bodyweight × 10, 10, 10 @ RIR 3', logged:[] },
+];
+
+const REASON_LABEL = {
+  first_time:['first time','brass'], requires_clearance:['awaiting clearance','slate'],
+  progress_load:['progress load','moss'], consolidate:['consolidate','amber'],
+  progress_reps:['progress reps','moss'], regress_load:['regress load','brick'],
+  deload:['deload','week'], repeat_after_compromised:['repeat after compromised','week'],
+  constrained:['constrained','slate'],
+};
+const PAIN = ['none','niggle','moderate','stop'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------------- exercise cards ---------------- */
+function targetLine(e){
+  const w = e.w === null ? '' : (e.w === 0 ? ' · bodyweight' : ' · ' + e.w + ' kg');
+  const reps = e.lo === e.hi ? e.lo : e.lo + '–' + e.hi;
+  return e.sets + ' × ' + reps + ' @ RIR ' + e.rir + (e.tempo ? ' · ' + e.tempo : '') + w;
+}
+
+function renderEx(){
+  document.getElementById('exlist').innerHTML = EX.map((e,ix)=>{
+    const [lab,tone] = REASON_LABEL[e.reason];
+    const chips = ['<span class="pill '+tone+'">'+lab+'</span>']
+      .concat(e.unloadable ? ['<span class="pill week">unloadable</span>'] : [])
+      .concat(e.constrained ? ['<span class="pill slate">constrained</span>'] : []).join('');
+    const wDisp = e.w === null
+      ? '<span class="presc-w none">Set a starting load</span>'
+      : (e.w === 0 ? '<span class="presc-w">Bodyweight</span>'
+                   : '<span class="presc-w">'+e.w+'<small>kg</small></span>');
+    const done = e.logged.map((s,i)=>
+      '<div class="set done"><span class="set-i">'+(i+1)+'</span>'+
+      '<span class="logged" style="grid-column:2/4">'+s.w+' <span class="sm">kg ×</span> '+s.r+
+      ' <span class="sm">@ RIR '+s.rir+'</span></span>'+
+      '<span class="meta" style="color:var(--moss)">✓</span></div>').join('');
+
+    const n = e.logged.length;
+    const pending = n < e.sets ? nextRow(e, n) : '';
+    return '<article class="ex'+(e.constrained?' constrained':'')+'" id="ex-'+e.id+'">'+
+      '<div class="ex-head">'+
+        '<div class="ex-title"><h3>'+esc(e.name)+'</h3></div>'+
+        '<div class="ex-target">'+targetLine(e)+'</div>'+
+        '<div class="chips">'+chips+'</div>'+
+        (e.prev ? '<div class="prevline">Last: <b>'+esc(e.prev)+'</b></div>' : '')+
+        '<div class="presc" data-open="false">'+
+          '<button class="presc-top" onclick="toggleWhy(\''+e.id+'\')" aria-label="Show rationale">'+
+            wDisp+
+            '<span class="why">WHY<svg width="9" height="6" viewBox="0 0 9 6" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1.5 4.5 5 8 1.5"/></svg></span>'+
+          '</button>'+
+          '<div class="rationale">'+esc(e.rationale)+
+            (e.prev?'<span class="prev">Previous: '+esc(e.prev)+'</span>':'')+'</div>'+
+          (e.cnote ? '<div class="cnote"><b>Physio note</b> — '+esc(e.cnote)+'</div>' : '')+
+        '</div>'+
+      '</div>'+
+      '<div class="sets">'+done+'</div>'+
+      pending+
+    '</article>';
+  }).join('');
+}
+
+function nextRow(e, n){
+  const reps = e.bySet ? (e.bySet[n] ?? e.lo) : e.lo;
+  const w = e.w === null ? '' : e.w;
+  return '<div class="sets"><div class="set">'+
+      '<span class="set-i" id="si-'+e.id+'">'+(n+1)+'</span>'+
+      '<span><div class="unit">kg</div><input class="inp" id="w-'+e.id+'" inputmode="decimal" value="'+w+'"'+(e.unloadable?' disabled':'')+'></span>'+
+      '<span><div class="unit">reps</div><input class="inp" id="r-'+e.id+'" inputmode="numeric" value="'+reps+'"></span>'+
+      '<span></span></div></div>'+
+    '<div class="rir-wrap">'+
+      '<div class="rir-lab"><span>Reps in reserve</span><span>target '+e.rir+'</span></div>'+
+      '<div class="rir" id="rir-'+e.id+'">'+
+        [0,1,2,3,4,5].map(v=>'<button aria-pressed="'+(v===e.rir)+'" class="'+(v===e.rir?'tgt':'')+
+          '" onclick="pickRir(\''+e.id+'\','+v+')">'+v+'</button>').join('')+
+      '</div>'+
+    '</div>'+
+    '<div class="actions">'+
+      '<button class="pain" data-p="none" id="pain-'+e.id+'" onclick="cyclePain(\''+e.id+'\')" aria-label="Pain flag">'+
+        '<span class="glyph"></span><span class="lbl">none</span></button>'+
+      '<button class="warm-t" aria-pressed="false" onclick="toggleWarm(this)" aria-label="Warmup set">W</button>'+
+      '<button class="log" onclick="logSet(\''+e.id+'\')">Log set '+(n+1)+' <span style="font-size:17px">✓</span></button>'+
+    '</div>'+
+    '<input class="painnote" id="pn-'+e.id+'" placeholder="What did it feel like?">';
+}
+
+function toggleWhy(id){
+  const p = document.querySelector('#ex-'+id+' .presc');
+  p.dataset.open = p.dataset.open === 'true' ? 'false' : 'true';
+}
+function pickRir(id, v){
+  document.querySelectorAll('#rir-'+id+' button').forEach((b,i)=>b.setAttribute('aria-pressed', i===v));
+}
+function cyclePain(id){
+  const b = document.getElementById('pain-'+id);
+  const next = PAIN[(PAIN.indexOf(b.dataset.p)+1) % 4];
+  b.dataset.p = next;
+  b.querySelector('.lbl').textContent = next;
+  document.getElementById('pn-'+id).classList.toggle('on', next !== 'none');
+}
+function toggleWarm(b){
+  const on = b.getAttribute('aria-pressed') === 'true';
+  b.setAttribute('aria-pressed', !on);
+}
+function logSet(id){
+  const e = EX.find(x=>x.id===id);
+  const rirBtn = document.querySelector('#rir-'+id+' button[aria-pressed="true"]');
+  e.logged.push({
+    w: parseFloat(document.getElementById('w-'+id).value) || 0,
+    r: parseInt(document.getElementById('r-'+id).value, 10) || 0,
+    rir: rirBtn ? [...rirBtn.parentNode.children].indexOf(rirBtn) : e.rir,
+  });
+  renderEx();
+  startTimer(e.rest, e.name + ' · set ' + e.logged.length);
+  const el = document.getElementById('ex-'+id);
+  if (el) el.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+/* ---------------- rest timer (endsAt, survives backgrounding) ---------------- */
+let endsAt = 0, total = 0, tick = null;
+function startTimer(sec, label){
+  total = sec; endsAt = Date.now() + sec*1000;
+  document.getElementById('tlabel').textContent = label;
+  document.getElementById('timer').classList.add('on');
+  clearInterval(tick); tick = setInterval(paint, 200); paint();
+}
+function paint(){
+  const left = Math.max(0, Math.round((endsAt - Date.now())/1000));
+  document.getElementById('tclock').textContent =
+    Math.floor(left/60) + ':' + String(left % 60).padStart(2,'0');
+  document.getElementById('tbar').style.width = (left/total*100) + '%';
+  if (left <= 0) { clearInterval(tick); document.getElementById('tclock').textContent = 'Go'; }
+}
+function addTime(){ endsAt += 30000; total += 30; paint(); }
+function stopTimer(){ clearInterval(tick); document.getElementById('timer').classList.remove('on'); }
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && endsAt) paint(); });
+
+/* ---------------- volume ---------------- */
+const VOL = [
+  ['Quads','quads',11.5,15,20],   ['Biceps','biceps',7.5,12,15],
+  ['Lateral delts','delts_lateral',9,10,15], ['Lats','lats',4.5,8,12],
+  ['Brachialis','brachialis',2,4,8], ['Hamstrings','hamstrings',7,6,10],
+  ['Upper back','upper_back',6.5,6,10], ['Triceps','triceps',6,6,10],
+  ['Rear delts','delts_rear',5,4,6], ['Abs','core_rectus',8,6,10],
+  ['Obliques','core_obliques',4.5,4,8], ['Mid chest','chest_mid',5,4,6],
+  ['Upper chest','chest_upper',4,3,5], ['Glutes','glutes',6.5,4,8],
+  ['Calves','calves',0,0,4], ['Front delts','delts_front',5.5,null,null],
+];
+function status(v, lo, hi){
+  if (lo === null) return 'no_target';
+  return v < lo ? 'under' : v > hi ? 'over' : 'in_range';
+}
+function strip(rows){
+  const CAP = 22;
+  return rows.map(([name,key,v,lo,hi])=>{
+    const st = status(v, lo, hi);
+    const pct = Math.min(100, v / CAP * 100);
+    const marks = lo === null ? '' :
+      '<span class="mark" style="left:'+(lo/CAP*100)+'%"></span>'+
+      '<span class="mark hi" style="left:'+(hi/CAP*100)+'%"></span>';
+    const tgt = lo === null ? '<span style="color:var(--muted)">—</span>' : lo+'–'+hi;
+    return '<div class="vrow"><span class="vname">'+name+'</span>'+
+      '<span class="track"><span class="fill '+st+'" style="width:'+pct+'%"></span>'+marks+'</span>'+
+      '<span class="vnum"><b>'+v+'</b> / '+tgt+'</span></div>';
+  }).join('');
+}
+
+/* ---------------- readiness scales ---------------- */
+const PRESET = {sleepq:4, stress:2, motivation:4, 'sore-quads':3, 'sore-lats':2, 'sore-delts':1};
+function buildScales(){
+  document.querySelectorAll('[data-scale]').forEach(el=>{
+    const key = el.dataset.scale, sel = PRESET[key];
+    el.innerHTML = [1,2,3,4,5].map(v =>
+      '<button aria-pressed="'+(v===sel)+'" onclick="pickScale(this)">'+v+'</button>').join('');
+  });
+}
+function pickScale(b){
+  [...b.parentNode.children].forEach(x=>x.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true');
+}
+
+/* ---------------- navigation ---------------- */
+function go(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id === 's'+'-'+name));
+  document.querySelectorAll('.nav button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.nav === name));
+  document.querySelectorAll('.picker button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.go === name));
+  document.getElementById('viewport').scrollTop = 0;
+}
+
+renderEx();
+buildScales();
+document.getElementById('strip-today').innerHTML = strip(VOL.slice(0,5));
+document.getElementById('strip-full').innerHTML = strip(VOL);
+startTimer(150, 'Flat Barbell Bench Press · set 3');
+</script>
+</body>
+</html>
