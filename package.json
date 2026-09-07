@@ -1,0 +1,19 @@
+{
+  "name": "omega",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Single-user hypertrophy + endurance training log with an LLM-coach API",
+  "packageManager": "pnpm@10.33.0",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "build": "pnpm -r --filter './packages/**' --filter './apps/**' build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "dev:api": "pnpm --filter @omega/api dev",
+    "dev:web": "pnpm --filter @omega/web dev",
+    "seed": "pnpm --filter @omega/api seed"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
