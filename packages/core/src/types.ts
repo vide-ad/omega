@@ -224,6 +224,16 @@ export interface SetLog {
   weight_kg: number;
   reps: number;
   rir: number | null;                 // null only if genuinely not recorded
+  /**
+   * Did a human assert this RIR? True when the user picked it, or the set is AMRAP (RIR 0 by
+   * definition). False when a client's pre-filled default went unchallenged. Only an observed RIR
+   * can justify adding load — see "The effort test" in docs/ENGINE-RULES.md.
+   *
+   * Optional, and absent means `true`: rows written before this field existed carry a real recorded
+   * RIR, and treating them as assumptions would retroactively freeze progression on real history.
+   * Only a client that knows its value was a default should send `false`.
+   */
+  rir_observed?: boolean;
   tempo: string | null;               // "3-0-1-0" eccentric-pause-concentric-pause
   rest_taken_seconds: number | null;  // from the timer
   pain_severity: PainSeverity;

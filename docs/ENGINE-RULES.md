@@ -8,6 +8,9 @@ reading. Implementation: `packages/core/src/engine/*`. Tests: `packages/core/src
 
 - **Working set** — `is_warmup = false`. Warmups never count for anything.
 - **Effective RIR** — `is_amrap ? 0 : (rir ?? 2)`. Used for hard-set volume. For progression, an AMRAP set is RIR 0; a null RIR stays unknown.
+- **Observed vs assumed RIR** — `SetLog.rir_observed` records whether a human asserted the value.
+  `true` when the user picked it, or the set is AMRAP (RIR 0 by definition). `false` when the client's
+  pre-filled default was never challenged. Only observed RIR may justify adding load — see C3.
 - **Unit** — one bilateral set, or for a unilateral exercise the left+right pair sharing a `set_index`
   (reps = min of sides, RIR = mean of sides, weight = per-side load).
 - **Done session** — `completed_at` set, or dated before today.
@@ -51,7 +54,7 @@ B  structure (always)
 C  load decision (first match wins)
    C1 no L                                               → first_time; weight = starting load rounded to increment, else M's weight, else null
    C2 deload week                                        → deload; weight = L.weight; no stall change
-   C3 all units ≥ L.rep_high AND meanRIR(non-AMRAP) ≥ L.target_rir
+   C3 all units ≥ L.rep_high AND the effort test passes (below)
                                                          → progress_load: L.weight + increment; stalls = 0
                                                            (increment 0 → progress_reps, +1 per unit uncapped, flag unloadable)
    C4 all units ≥ L.rep_high AND meanRIR < L.target_rir  → consolidate: hold weight and range
@@ -65,6 +68,28 @@ D  constraint clamp (when any constraint applies and A did not stop)
    flag constrained; constraint notes attached; rationale states what the clamp changed
 E  stall_review flag when consecutive_stalls ≥ 3
 ```
+
+### The effort test (C3/C4)
+
+`progress_load` may only fire on **evidence that the set was easy**, never on a default. The test passes when:
+
+- there is at least one non-AMRAP unit with **observed** RIR, and the mean over those units ≥ the session's
+  `target_rir`; **or**
+- there are no non-AMRAP units at all (an AMRAP-only exercise) — going to failure and still reaching the top of
+  the range is itself the evidence.
+
+It fails when non-AMRAP units exist but **none** has an observed RIR. That falls through to C4 `consolidate`:
+hold the weight until the lifter says it was easy.
+
+Why this rule exists: the UI pre-fills RIR at the target, so an untouched chip previously produced
+`meanRIR == target`, which satisfied `≥ target` and added load. Verified against the built engine — a pre-filled
+RIR of 3 and a genuine report of RIR 4 both returned `progress_load 45 kg`, while a null RIR held at 42.5. The
+convenience default was converting "we don't know" into "the lifter said it was easy", on the single input the
+whole engine turns on. Assumed RIR still counts everywhere else: for hard-set volume, for qualification, and for
+`progress_reps`. It buys you rep progression, not load progression.
+
+**Existing rows** predate the field: treat a non-null `rir` with no `rir_observed` as observed, since assuming
+otherwise would retroactively freeze progression on real history.
 
 `consecutive_stalls` is **derived**: the count of `regress_load` reasons on done sessions since the most recent
 `progress_load`. `ProgressionState` is a cache written from `next_state`, never an input.
@@ -84,6 +109,7 @@ date, then completion time, then id, so two sessions on the same date resolve de
 | §5.5 compare to `T` (template) | compare to the session's own stored targets | RIR ramps and multi-template rep ranges |
 | §4 ISO weeks | mesocycle-anchored 7-day blocks inside a block | Sat/Sun/Wed microcycle |
 | §9.5 bench 42 kg | 42.5 kg | 2.5 kg barbell grid |
+| §7 "RIR pre-filled with the target" | pre-fill stays, but an untouched default cannot justify adding load | a default is not an observation |
 
 ## Seed-data caveats surfaced by the audit (not changed; the user decides)
 

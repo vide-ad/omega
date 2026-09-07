@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Omega training log — design uplift. Same engine output, same data, rebuilt hierarchy and colour encoding.">
+<title>Omega — design uplift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* =============================================================================
+   OMEGA — DESIGN UPLIFT
+   Dark-only by intent (kept from the original: 6am, bad gym lighting).
+
+   THE ENCODING CONTRACT — every colour has exactly one owner.
+     brass  the engine is speaking. Prescriptions and rationale. Nothing else.
+     moss   banked. A set you have actually completed.
+     slate  something limits what the engine may conclude — a physio
+            constraint, or a day you marked compromised.
+     pain   the ONLY alarming colours in the app. Pain and nothing but pain.
+     grey   everything else, including volume, which reads from geometry.
+
+   In the original, brass (engine) and amber (under-target / warmup / niggle)
+   sat DE00 4.5 apart — below the threshold where two colours read as the same
+   colour. The single most load-bearing distinction in the product ("this number
+   is an instruction, not a record") was carried by a hue that meant three other
+   things. Everything below follows from separating those.
+   ========================================================================== */
+:root{
+  /* ground — five steps, so LEVEL can do the separating that borders were doing */
+  --iron-950:#0B0E12;  /* page */
+  --iron-900:#10141A;  /* phone ground */
+  --iron-850:#161B23;  /* recessed — inputs, wells */
+  --iron-800:#1C222C;  /* resting surface — collapsed rows */
+  --iron-750:#232A36;  /* raised — the ACTIVE card */
+  --iron-700:#2C3441;  /* quiet rule */
+  --iron-650:#3E4857;  /* rule */
+  --iron-550:#6E7B8E;  /* border that must IDENTIFY a control (>=3:1) */
+
+  /* ink */
+  --chalk:#F0EDE6;     /* 12.3:1 worst case */
+  --chalk-2:#C6CAD1;   /*  8.8:1 */
+  --chalk-3:#A39C94;   /*  5.3:1 — warmed from the original's cool grey, which
+                              was DE00 15.7 from the constraint colour */
+
+  /* semantic — one owner each */
+  --brass:#E3AC44;     /* THE ENGINE. 7.0:1 on the active card */
+  --moss:#6FBE7E;      /* banked */
+  --slate:#A594FF;     /* engine-limiting condition. DE00 30.6 from --chalk-3 */
+  --pain-1:#C08894;    /* niggle   */
+  --pain-2:#E86F7F;    /* moderate */
+  --pain-3:#FF8A72;    /* stop     */
+
+  --r:12px; --r-sm:8px;
+  /* TWO families. Mono means one thing: "a measured quantity you compare."
+     Labels are never mono — that single rule is most of what stops the screen
+     reading as a wall of data. */
+  --f:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --f-num:'IBM Plex Mono','SF Mono',Menlo,monospace;
+
+  /* eight sizes, down from eighteen */
+  --t-11:11px; --t-12:12px; --t-13:13px; --t-15:15px;
+  --t-17:17px; --t-20:20px; --t-26:26px; --t-38:38px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--iron-950);color:var(--chalk);font-family:var(--f);
+  -webkit-font-smoothing:antialiased;font-size:var(--t-15);line-height:1.45}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input{font:inherit}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+/* ---------- page chrome ---------- */
+.page{max-width:1240px;margin:0 auto;padding:28px 20px 64px;display:grid;gap:28px}
+.masthead{border-bottom:1px solid var(--iron-700);padding-bottom:18px}
+.mh-top{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 14px}
+.wordmark{font-size:var(--t-26);font-weight:700;letter-spacing:-.02em;margin:0}
+.tag{font-family:var(--f-num);font-size:var(--t-11);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--brass);border:1px solid var(--brass);border-radius:999px;padding:3px 9px}
+.masthead p{margin:10px 0 0;color:var(--chalk-3);font-size:var(--t-13);max-width:78ch}
+.stage{display:grid;gap:26px;align-items:start}
+@media (min-width:980px){.stage{grid-template-columns:minmax(0,1fr) 390px;gap:48px}.page{padding-top:40px}}
+
+.notes h2{font-size:var(--t-12);font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--chalk-3);margin:0 0 14px}
+.note{border-left:2px solid var(--iron-650);padding:0 0 0 15px;margin-bottom:20px}
+.note.key{border-left-color:var(--brass)}
+.note h3{font-size:var(--t-15);margin:0 0 5px;font-weight:600}
+.note p{margin:0;color:var(--chalk-2);font-size:var(--t-13);max-width:70ch}
+.note p + p{margin-top:7px}
+.note code{font-family:var(--f-num);font-size:var(--t-12);color:var(--brass);
+  background:var(--iron-800);padding:1px 5px;border-radius:4px}
+.was{display:block;margin-top:7px;padding-left:11px;border-left:2px solid var(--iron-700);
+  color:var(--chalk-3);font-size:var(--t-12)}
+.was b{color:var(--chalk-2);font-weight:600}
+
+/* ---------- phone ---------- */
+.phone{width:390px;max-width:100%;margin:0 auto;background:var(--iron-900);
+  border:1px solid var(--iron-650);border-radius:28px;overflow:hidden;
+  box-shadow:0 28px 70px rgba(0,0,0,.6);display:flex;flex-direction:column;
+  height:812px;position:relative}
+@media (max-width:979px){.phone{height:760px}}
+.status{display:flex;justify-content:space-between;align-items:center;padding:11px 20px 5px;
+  font-family:var(--f-num);font-size:var(--t-11);color:var(--chalk-3)}
+.viewport{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 14px 190px;scrollbar-width:thin}
+.screen{display:none}.screen.on{display:block}
+
+/* ---------- app furniture ---------- */
+.apphead{padding:12px 2px 18px}
+.apphead .row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.apphead h1{font-size:var(--t-26);font-weight:700;margin:0;letter-spacing:-.02em;line-height:1.1}
+.apphead .sub{color:var(--chalk-3);font-size:var(--t-13);margin:4px 0 0}
+.lede{font-size:var(--t-11);font-weight:600;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--chalk-3);margin:26px 0 10px;padding:0 2px}
+.lede:first-child{margin-top:6px}
+
+.pill{font-family:var(--f-num);font-size:var(--t-11);letter-spacing:.04em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;white-space:nowrap;border:1px solid;display:inline-block}
+.pill.quiet{color:var(--chalk-3);border-color:var(--iron-650);background:var(--iron-800)}
+.pill.brass{color:var(--brass);border-color:var(--brass);background:rgba(227,172,68,.10)}
+.pill.moss {color:var(--moss); border-color:var(--moss); background:rgba(111,190,126,.10)}
+.pill.slate{color:var(--slate);border-color:var(--slate);background:rgba(165,148,255,.12)}
+
+/* ---------- today: start rows ---------- */
+/* the original had .t and .d as inline spans, so title and subtitle ran
+   together mid-word. They are blocks now. */
+.start{width:100%;text-align:left;background:var(--iron-800);border:1px solid var(--iron-650);
+  border-radius:var(--r);padding:14px 15px;margin-bottom:9px;display:flex;
+  justify-content:space-between;align-items:center;gap:14px;
+  transition:border-color .15s,background .15s}
+.start:hover{border-color:var(--iron-550);background:var(--iron-750)}
+.start .tx{min-width:0}
+.start .t{display:block;font-size:var(--t-15);font-weight:600;line-height:1.3}
+.start .d{display:block;font-size:var(--t-13);color:var(--chalk-3);margin-top:3px}
+.start .go{font-family:var(--f-num);font-size:var(--t-11);color:var(--chalk-3);
+  letter-spacing:.06em;flex-shrink:0}
+.start.resume{background:linear-gradient(180deg,rgba(227,172,68,.13),rgba(227,172,68,.04));
+  border-color:var(--brass)}
+.start.resume .go{color:var(--brass)}
+
+/* =========================================================================
+   SESSION — an accordion. One exercise open, the rest one line each.
+   The original stacked seven full cards: ~4,000px of scroll, and the primary
+   action (Log) sat wherever the scroll happened to leave it. Collapsing the
+   inactive ones puts the whole session on one screen and pins the thing you
+   press to roughly the same place every time.
+   ====================================================================== */
+.exrow{width:100%;text-align:left;display:grid;grid-template-columns:22px 1fr auto;
+  gap:12px;align-items:center;background:var(--iron-800);border:1px solid var(--iron-650);
+  border-radius:var(--r);padding:13px 14px;margin-bottom:8px;min-height:56px;
+  transition:border-color .15s,background .15s}
+.exrow:hover{border-color:var(--iron-550)}
+.exrow.done{background:var(--iron-850);border-color:var(--iron-700)}
+.exrow .tick{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--iron-550);
+  display:flex;align-items:center;justify-content:center;font-size:var(--t-12);color:var(--iron-550)}
+.exrow.done .tick{background:var(--moss);border-color:var(--moss);color:var(--iron-900);font-weight:700}
+.exrow.constrained .tick{border-color:var(--slate);color:var(--slate)}
+.exrow .nm{display:block;font-size:var(--t-15);font-weight:600;line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exrow.done .nm{color:var(--chalk-2)}
+.exrow .mt{display:block;font-size:var(--t-12);color:var(--chalk-3);margin-top:2px}
+.exrow .rt{text-align:right;flex-shrink:0}
+.exrow .rt .w{display:block;font-family:var(--f-num);font-size:var(--t-15);color:var(--chalk-2)}
+.exrow .rt .c{display:block;font-family:var(--f-num);font-size:var(--t-11);color:var(--chalk-3);margin-top:2px}
+
+/* the open card — raised a level, so LEVEL says "this is the one" */
+.excard{background:var(--iron-750);border:1px solid var(--iron-550);border-radius:var(--r);
+  margin-bottom:8px;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,.4)}
+.excard.constrained{border-left:3px solid var(--slate)}
+.exhead{padding:15px 15px 0}
+.exhead h3{font-size:var(--t-20);font-weight:700;margin:0;letter-spacing:-.01em;line-height:1.2}
+.extarget{font-size:var(--t-13);color:var(--chalk-3);margin-top:4px}
+.extarget .num{color:var(--chalk-2)}
+.exchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+
+/* --- the engine's block. Labelled, so brass never has to carry the idea alone --- */
+.engine{margin:14px 0 0;background:var(--iron-850);border-radius:var(--r-sm);
+  border:1px solid var(--iron-700);overflow:hidden}
+.engine-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;
+  width:100%;text-align:left;padding:11px 13px 12px}
+.engine-lab{font-size:var(--t-11);font-weight:600;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--brass);display:block;margin-bottom:3px}
+.engine-w{display:block;font-family:var(--f-num);font-size:var(--t-38);font-weight:600;color:var(--brass);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:1}
+.engine-w small{font-size:var(--t-15);font-weight:400;margin-left:3px;letter-spacing:0}
+.engine-w.none{font-family:var(--f);font-size:var(--t-17);font-weight:600;
+  color:var(--chalk-2);letter-spacing:0}  /* a sentence, not a quantity — mono is for numbers */
+.engine-verb{display:block;font-size:var(--t-13);color:var(--chalk-2);margin-top:5px}
+.why{font-size:var(--t-12);color:var(--chalk-2);display:flex;align-items:center;gap:5px;
+  flex-shrink:0;border:1px solid var(--iron-550);border-radius:999px;padding:5px 11px;
+  min-height:32px}
+.why svg{transition:transform .2s}
+.engine[data-open="true"] .why svg{transform:rotate(180deg)}
+.rationale{display:none;padding:0 13px 13px;font-size:var(--t-13);color:var(--chalk-2);line-height:1.5}
+.engine[data-open="true"] .rationale{display:block}
+.rationale .prev{font-family:var(--f-num);font-size:var(--t-12);color:var(--chalk-3);
+  display:block;margin-top:8px;font-variant-numeric:tabular-nums}
+.cnote{margin:13px 15px 0;font-size:var(--t-13);color:var(--chalk-2);line-height:1.45;
+  background:rgba(165,148,255,.10);border:1px solid rgba(165,148,255,.34);
+  border-radius:var(--r-sm);padding:10px 12px}
+.cnote b{color:var(--slate);font-weight:600;display:block;margin-bottom:3px;
+  font-size:var(--t-11);letter-spacing:.08em;text-transform:uppercase}
+
+/* --- banked sets: quiet, moss, unmistakably finished --- */
+.banked{margin:14px 0 0;border-top:1px solid var(--iron-700)}
+.bset{display:grid;grid-template-columns:20px 1fr;gap:11px;align-items:center;
+  padding:9px 15px;border-bottom:1px solid var(--iron-700)}
+.bset:last-child{border-bottom:none}
+.bset .k{width:16px;height:16px;border-radius:50%;background:var(--moss);color:var(--iron-900);
+  display:flex;align-items:center;justify-content:center;font-size:var(--t-11);font-weight:700}
+.bset .v{font-family:var(--f-num);font-size:var(--t-13);color:var(--chalk-2);
+  font-variant-numeric:tabular-nums}
+.bset .v em{font-style:normal;color:var(--chalk-3)}
+
+/* --- the working set --- */
+.work{padding:15px}
+.work-lab{font-size:var(--t-11);font-weight:600;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--chalk-3);margin-bottom:9px;display:flex;justify-content:space-between;align-items:baseline}
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ifield label{display:block;font-size:var(--t-11);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--chalk-3);margin-bottom:5px}
+.inp{width:100%;background:var(--iron-850);border:1px solid var(--iron-550);border-radius:var(--r-sm);
+  padding:12px 10px;color:var(--chalk);font-family:var(--f-num);font-size:var(--t-20);
+  text-align:center;font-variant-numeric:tabular-nums;min-height:52px;font-weight:500}
+.inp:focus{border-color:var(--brass);outline:none;box-shadow:0 0 0 3px rgba(227,172,68,.18)}
+.inp:disabled{color:var(--chalk-3);background:var(--iron-900);border-color:var(--iron-650)}
+
+/* --- RIR: the honesty fix ------------------------------------------------
+   The original pre-selected the engine's target and styled it exactly like a
+   value you had chosen. Tapping Log then recorded an assumption as an
+   observation — and mean RIR is the single input the whole progression engine
+   runs on (it is the entire difference between `consolidate` and
+   `progress_load`). Same one tap, but assumed and observed now look different:
+   brass outline = the engine guessed. Chalk fill = you said so.
+   ---------------------------------------------------------------------- */
+.rir-head{display:flex;justify-content:space-between;align-items:baseline;
+  margin:18px 0 8px;gap:10px}
+.rir-head .q{font-size:var(--t-13);font-weight:600}
+.rir-head .s{font-size:var(--t-12);color:var(--brass)}
+.rir-head .s.set{color:var(--moss)}
+.rir{display:flex;gap:6px}
+.rir button{flex:1;min-height:52px;border-radius:var(--r-sm);background:var(--iron-850);
+  border:1px solid var(--iron-550);font-family:var(--f-num);font-size:var(--t-17);
+  color:var(--chalk-2);transition:background .12s,border-color .12s,color .12s}
+.rir button[data-assumed="true"]{border:2px dashed var(--brass);color:var(--brass);background:transparent}
+.rir button[aria-pressed="true"]{background:var(--chalk);color:var(--iron-900);
+  border:1px solid var(--chalk);font-weight:600}
+
+/* --- pain: order carried by GLYPH FILL, not hue alone, so it survives
+       greyscale and dichromacy. Warm is reserved for this and nothing else. --- */
+.actions{display:flex;gap:9px;margin-top:16px;align-items:stretch}
+.pain{flex:0 0 auto;min-width:62px;min-height:54px;border-radius:var(--r-sm);
+  border:1px solid var(--iron-550);background:var(--iron-850);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .15s}
+.pain .glyph{width:13px;height:13px;border-radius:50%;border:2px solid var(--chalk-3);background:transparent}
+.pain .lbl{font-size:var(--t-11);letter-spacing:.04em;text-transform:uppercase;color:var(--chalk-3)}
+.pain[data-p="niggle"]  {border-color:var(--pain-1);background:rgba(192,136,148,.14)}
+.pain[data-p="niggle"] .glyph{border-color:var(--pain-1);background:linear-gradient(90deg,var(--pain-1) 50%,transparent 50%)}
+.pain[data-p="niggle"] .lbl{color:var(--pain-1)}
+.pain[data-p="moderate"]{border-color:var(--pain-2);background:rgba(232,111,127,.16)}
+.pain[data-p="moderate"] .glyph{border-color:var(--pain-2);background:var(--pain-2)}
+.pain[data-p="moderate"] .lbl{color:var(--pain-2)}
+.pain[data-p="stop"]    {border-color:var(--pain-3);background:rgba(255,138,114,.18)}
+.pain[data-p="stop"] .glyph{border-color:var(--pain-3);background:var(--pain-3);
+  box-shadow:0 0 0 3px rgba(255,138,114,.30)}
+.pain[data-p="stop"] .lbl{color:var(--pain-3)}
+.warm-t{flex:0 0 auto;min-width:54px;min-height:54px;border-radius:var(--r-sm);
+  border:1px solid var(--iron-550);background:var(--iron-850);font-family:var(--f-num);
+  font-size:var(--t-13);color:var(--chalk-3)}
+.warm-t[aria-pressed="true"]{background:var(--chalk);color:var(--iron-900);
+  border-color:var(--chalk);font-weight:600}
+.log{flex:1;min-height:54px;border-radius:var(--r-sm);background:var(--chalk);color:var(--iron-900);
+  font-weight:700;font-size:var(--t-15);display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:transform .12s}
+.log:active{transform:scale(.985)}
+.painnote{margin-top:10px;width:100%;background:var(--iron-850);border:1px solid var(--iron-550);
+  border-radius:var(--r-sm);padding:11px 12px;color:var(--chalk);font-size:var(--t-15);display:none}
+.painnote.on{display:block}
+
+/* --- session progress, pinned: you always know where you are --- */
+.sprog{position:sticky;top:0;z-index:4;background:var(--iron-900);padding:8px 2px 12px;
+  margin:0 0 4px}
+.sprog .rowline{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.sprog .l{font-size:var(--t-12);color:var(--chalk-3)}
+.sprog .r{font-family:var(--f-num);font-size:var(--t-12);color:var(--chalk-2)}
+.sbar{height:4px;background:var(--iron-700);border-radius:99px;overflow:hidden}
+.sbar i{display:block;height:100%;background:var(--moss);border-radius:99px;transition:width .3s}
+
+/* =========================================================================
+   VOLUME — the target RANGE is drawn as a band you can see.
+   In the original it was two 1.5px hairlines measuring 1.20:1 and 2.48:1
+   against the track. The chart's entire job is "am I inside the range" and
+   the range was invisible; status was left to hue alone. Now the band is a
+   visible zone and you read under/in/over from geometry — colour only
+   reinforces it, so the chart still works in greyscale.
+   ====================================================================== */
+.card{background:var(--iron-800);border:1px solid var(--iron-650);border-radius:var(--r);
+  padding:15px;margin-bottom:12px}
+.strip{display:flex;flex-direction:column;gap:11px}
+.vrow{display:grid;grid-template-columns:72px 1fr 74px;gap:9px;align-items:center}
+.vname{font-size:var(--t-13);color:var(--chalk-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track{position:relative;height:12px;background:var(--iron-850);border-radius:4px;overflow:hidden}
+.band{position:absolute;top:0;bottom:0;background:var(--iron-700);
+  border-left:1.5px solid var(--iron-550);border-right:1.5px solid var(--iron-550)}
+.fill{position:absolute;left:0;top:2px;bottom:2px;border-radius:3px;background:var(--iron-550)}
+.fill.in_range{background:var(--moss)}
+.vnum{font-family:var(--f-num);font-size:var(--t-12);text-align:right;color:var(--chalk-3);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.vnum b{color:var(--chalk);font-weight:600}
+.vlegend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:13px;
+  border-top:1px solid var(--iron-700);font-size:var(--t-12);color:var(--chalk-3)}
+.vlegend span{display:flex;align-items:center;gap:6px}
+.vkey{width:22px;height:9px;border-radius:3px;flex-shrink:0}
+.vkey.band{position:static;background:var(--iron-700);border:1.5px solid var(--iron-550)}
+.vkey.inr{background:var(--moss)}
+
+/* ---------- readiness ---------- */
+.field{margin-bottom:18px}
+.flab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px;gap:10px}
+.flab .n{font-size:var(--t-15);font-weight:600}
+.flab .h{font-size:var(--t-12);color:var(--chalk-3);text-align:right}
+.scale{display:flex;gap:6px}
+.scale button{flex:1;min-height:52px;border-radius:var(--r-sm);background:var(--iron-800);
+  border:1px solid var(--iron-550);font-family:var(--f-num);font-size:var(--t-17);color:var(--chalk-2)}
+.scale button[aria-pressed="true"]{background:var(--chalk);color:var(--iron-900);
+  border-color:var(--chalk);font-weight:600}
+.numfield{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  background:var(--iron-800);border:1px solid var(--iron-650);border-radius:var(--r);padding:14px 15px}
+.toggle .tx b{display:block;font-size:var(--t-15);font-weight:600;margin-bottom:2px}
+.toggle .tx span{font-size:var(--t-13);color:var(--chalk-3);max-width:28ch;display:block}
+.sw{width:52px;height:31px;border-radius:99px;background:var(--iron-650);position:relative;
+  flex-shrink:0;transition:background .18s;border:1px solid var(--iron-550)}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;
+  background:var(--chalk);transition:transform .18s}
+.sw[aria-pressed="true"]{background:var(--slate);border-color:var(--slate)}
+.sw[aria-pressed="true"]::after{transform:translateX(21px)}
+.save{width:100%;min-height:54px;border-radius:var(--r);background:var(--chalk);color:var(--iron-900);
+  font-weight:700;font-size:var(--t-15);margin-top:8px}
+
+/* ---------- history ---------- */
+.hrow{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:14px 0;
+  border-bottom:1px solid var(--iron-700)}
+.hrow:last-child{border-bottom:none}
+.hrow .d{font-family:var(--f-num);font-size:var(--t-11);color:var(--chalk-3);letter-spacing:.04em}
+.hrow .n{font-size:var(--t-15);font-weight:600;margin-top:3px}
+.hrow .s{font-family:var(--f-num);font-size:var(--t-13);color:var(--chalk-2);text-align:right;
+  font-variant-numeric:tabular-nums;flex-shrink:0}
+.foot{color:var(--chalk-3);font-size:var(--t-12);padding:20px 4px 8px;line-height:1.55}
+
+/* =========================================================================
+   REST TIMER — between sets this is the only thing you care about, so it
+   stops being a 60px strip. It also names what is COMING, not what just
+   finished: dead time becomes preparation.
+   ====================================================================== */
+.timer{position:absolute;left:0;right:0;bottom:60px;background:var(--iron-800);
+  border-top:1px solid var(--brass);padding:14px 16px 15px;display:none;z-index:5}
+.timer.on{display:block}
+.timer .tt{display:flex;align-items:center;gap:14px}
+.timer .t{font-family:var(--f-num);font-size:var(--t-38);font-weight:600;color:var(--chalk);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:1;min-width:104px}
+.timer .lab{flex:1;min-width:0}
+.timer .lab b{display:block;font-size:var(--t-11);color:var(--chalk-3);text-transform:uppercase;
+  letter-spacing:.1em;font-weight:600;margin-bottom:3px}
+.timer .lab span{display:block;font-size:var(--t-13);color:var(--chalk-2);line-height:1.35}
+.timer .btns{display:flex;gap:8px;margin-top:12px}
+.timer .btns button{flex:1;border:1px solid var(--iron-550);border-radius:var(--r-sm);
+  padding:10px;font-family:var(--f-num);font-size:var(--t-13);color:var(--chalk-2);
+  background:var(--iron-850);min-height:44px}
+.tbar{position:absolute;left:0;bottom:0;height:3px;background:var(--brass);width:100%;
+  transition:width .2s linear}
+
+/* ---------- nav ---------- */
+.nav{position:absolute;left:0;right:0;bottom:0;height:60px;background:var(--iron-900);
+  border-top:1px solid var(--iron-700);display:grid;grid-template-columns:repeat(5,1fr);z-index:6}
+.nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  font-size:var(--t-11);font-weight:600;letter-spacing:.02em;color:var(--chalk-3)}
+.nav button[aria-pressed="true"]{color:var(--chalk)}
+.nav svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="mh-top">
+      <h1 class="wordmark">Omega</h1>
+      <span class="tag">Design uplift</span>
+    </div>
+    <p>Same five screens, same seed data, same engine strings — rebuilt around hierarchy and a
+    one-owner colour contract. Tap an exercise to open it, pick an RIR and watch the chip change
+    from the engine's assumption to your observation, cycle a pain flag, log a set.
+    <strong style="color:var(--chalk-2)">Every number is example data.</strong></p>
+  </header>
+
+  <div class="stage">
+    <div class="notes">
+      <h2>What changed, and why</h2>
+
+      <div class="note key">
+        <h3>Brass now means one thing</h3>
+        <p>The engine's voice was <code>#C8963E</code>. "Under target", "warmup set" and "niggle pain"
+        were <code>#D9A441</code> — <strong>ΔE00 4.5 apart</strong>, which is close enough that most
+        people read them as one colour. The product's central claim is that a brass number is an
+        instruction rather than a record; that claim was being carried by a hue with three other jobs.</p>
+        <p>Now brass is the engine and nothing else. Warm is reserved for pain and nothing else.
+        Volume reads from geometry, so it needs no hue at all.</p>
+        <span class="was"><b>Also fixed:</b> the constraint colour sat ΔE00 10.3 from ordinary
+        secondary text, so "a physio limit applies" looked like a caption. Warming the grey — one
+        token — moved it to 30.6.</span>
+      </div>
+
+      <div class="note key">
+        <h3>The engine's guess no longer impersonates your answer</h3>
+        <p>RIR was pre-selected at target and styled exactly like a value you had chosen. So the
+        default path — tap Log — recorded an assumption as an observation, and mean RIR is the one
+        input the whole progression engine runs on. It is the entire difference between
+        <code>consolidate</code> and <code>progress_load</code>.</p>
+        <p>Still one tap. But the assumed value is a brass dashed outline and a chosen one is a solid
+        chalk fill, and the label above says which you are looking at. The card tells the truth about
+        where the number came from — and so can the coach.</p>
+      </div>
+
+      <div class="note">
+        <h3>One exercise open at a time</h3>
+        <p>Seven expanded cards made about 4,000px of scroll, and the Log button landed wherever the
+        scroll left it. Collapsed rows put the session on one screen, keep the button in roughly the
+        same place every set, and let the open card be more generous rather than less.</p>
+      </div>
+
+      <div class="note">
+        <h3>The volume range is visible now</h3>
+        <p>The target boundaries were 1.5px hairlines measuring <strong>1.20:1 and 2.48:1</strong>
+        against their track. The chart's only job is "am I inside the range" and the range could not
+        be seen. It is a band you can see, so under/in/over reads from geometry — colour reinforces
+        it instead of carrying it.</p>
+        <span class="was"><b>And a framing change:</b> "under" was amber, a warning. Mid-week you are
+        under target because it is Wednesday. Encoding "not finished yet" as "wrong" makes the screen
+        scold you five days out of seven.</span>
+      </div>
+
+      <div class="note">
+        <h3>Rest names what's next</h3>
+        <p>The timer said which set you had just finished. It now says which one is coming, so the
+        ninety seconds are preparation rather than a gap — and it is large enough to read from arm's
+        length with a bar to gauge without counting.</p>
+      </div>
+
+      <div class="note">
+        <h3>Type does less shouting</h3>
+        <p>Three families became two, and eighteen sizes became eight. Mono is now reserved for
+        measured quantities, so a number always looks like a number and a label never does. That one
+        rule is most of what stopped the card reading as a wall of data.</p>
+        <span class="was"><b>Contrast:</b> the "kg" unit beside each prescription measured 2.25:1.
+        Everything here clears AA, and controls clear the 3:1 non-text floor.</span>
+      </div>
+
+      <div class="note">
+        <h3>Left alone on purpose</h3>
+        <p>Dark-only, the engine's rationale strings, the information architecture, the five-tab nav
+        and the seed data are all unchanged. They were the strongest parts of the original and none
+        of the problems above came from them.</p>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="status">
+        <span class="num">9:41</span>
+        <span class="num">Sat 19 Sep · Week 2</span>
+      </div>
+
+      <div class="viewport" id="viewport">
+
+        <!-- ================= TODAY ================= -->
+        <section class="screen on" id="s-today">
+          <div class="apphead">
+            <div class="row">
+              <div>
+                <h1>Saturday</h1>
+                <p class="sub">Return to training — block 1</p>
+              </div>
+              <span class="pill quiet">Week 2 of 6</span>
+            </div>
+          </div>
+
+          <button class="start resume" onclick="go('session')">
+            <span class="tx">
+              <span class="t">Day 1 — Quad + Pull</span>
+              <span class="d" id="today-prog">In progress</span>
+            </span>
+            <span class="go">RESUME →</span>
+          </button>
+
+          <p class="lede">Readiness</p>
+          <button class="start" onclick="go('readiness')">
+            <span class="tx">
+              <span class="t">Not logged today</span>
+              <span class="d">Bodyweight, sleep, RHR, soreness · 20 seconds</span>
+            </span>
+            <span class="go">LOG →</span>
+          </button>
+
+          <p class="lede">Start a session</p>
+          <button class="start" onclick="go('session')">
+            <span class="tx"><span class="t">Day 2 — Push + Isolation</span>
+            <span class="d">Sunday · 7 exercises</span></span>
+            <span class="go">START</span>
+          </button>
+          <button class="start" onclick="go('session')">
+            <span class="tx"><span class="t">Day 3 — Full body top-up</span>
+            <span class="d">Wednesday · 8 exercises</span></span>
+            <span class="go">START</span>
+          </button>
+
+          <p class="lede">This week's volume</p>
+          <div class="card">
+            <div class="strip" id="strip-today"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;
+              margin-top:15px;padding-top:13px;border-top:1px solid var(--iron-700)">
+              <span style="font-size:var(--t-12);color:var(--chalk-3)">4 muscles still to reach target</span>
+              <button style="font-family:var(--f-num);font-size:var(--t-11);color:var(--chalk-2)"
+                onclick="go('volume')">ALL 19 →</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SESSION ================= -->
+        <section class="screen" id="s-session">
+          <div class="apphead">
+            <div class="row">
+              <div>
+                <h1>Quad + Pull</h1>
+                <p class="sub">Day 1 · Week 2 · Sat 19 Sep</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="sprog">
+            <div class="rowline">
+              <span class="l">Session progress</span>
+              <span class="r" id="sprog-n">4 / 21 sets</span>
+            </div>
+            <div class="sbar"><i id="sprog-bar" style="width:19%"></i></div>
+          </div>
+
+          <div id="exlist"></div>
+
+          <p class="foot">Two exercises are load-limited by an active constraint — they carry the
+          violet edge and the physio's note. Nothing is excluded from the session.</p>
+        </section>
+
+        <!-- ================= READINESS ================= -->
+        <section class="screen" id="s-readiness">
+          <div class="apphead">
+            <div class="row">
+              <div>
+                <h1>Readiness</h1>
+                <p class="sub">Saturday 19 September</p>
+              </div>
+              <span class="pill quiet">~20 sec</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="numfield">
+              <div class="ifield"><label>Bodyweight kg</label>
+                <input class="inp" inputmode="decimal" value="78.4"></div>
+              <div class="ifield"><label>Resting HR</label>
+                <input class="inp" inputmode="numeric" value="61"></div>
+              <div class="ifield"><label>Sleep hrs</label>
+                <input class="inp" inputmode="decimal" value="7.5"></div>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="flab"><span class="n">Sleep quality</span><span class="h">1 poor — 5 great</span></div>
+            <div class="scale" data-scale="sleepq"></div>
+          </div>
+          <div class="field">
+            <div class="flab"><span class="n">Stress</span><span class="h">1 low — 5 high</span></div>
+            <div class="scale" data-scale="stress"></div>
+          </div>
+          <div class="field">
+            <div class="flab"><span class="n">Motivation</span><span class="h">1 low — 5 high</span></div>
+            <div class="scale" data-scale="motivation"></div>
+          </div>
+
+          <p class="lede">Soreness · trained in the last 48h</p>
+          <div class="field">
+            <div class="flab"><span class="n">Quads</span><span class="h">Squat, leg extension</span></div>
+            <div class="scale" data-scale="sore-quads"></div>
+          </div>
+          <div class="field">
+            <div class="flab"><span class="n">Lats</span><span class="h">Chin-up</span></div>
+            <div class="scale" data-scale="sore-lats"></div>
+          </div>
+          <div class="field">
+            <div class="flab"><span class="n">Lateral delts</span><span class="h">Cable lateral raise</span></div>
+            <div class="scale" data-scale="sore-delts"></div>
+          </div>
+
+          <div class="toggle" style="margin-bottom:14px">
+            <span class="tx"><b>Today was rough</b>
+              <span>Excludes this session from progression decisions</span></span>
+            <button class="sw" aria-pressed="false" aria-label="Today was rough"
+              onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed')==='true'?'false':'true')"></button>
+          </div>
+          <button class="save">Save readiness</button>
+          <p class="foot">Sleep under 5.5h, an RHR more than 7 above your 30-day median, or this
+          toggle marks the day compromised — the engine then repeats your last good prescription
+          instead of reading the dip as a regression.</p>
+        </section>
+
+        <!-- ================= VOLUME ================= -->
+        <section class="screen" id="s-volume">
+          <div class="apphead">
+            <div class="row">
+              <div>
+                <h1>Volume</h1>
+                <p class="sub">Hard sets per muscle · 13–19 Sep</p>
+              </div>
+              <span class="pill quiet">Week 2 · partial</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="strip" id="strip-full"></div>
+            <div class="vlegend">
+              <span><i class="vkey band"></i>target range</span>
+              <span><i class="vkey inr"></i>inside it</span>
+              <span style="color:var(--chalk-3)">short of it / past it — read the bar's end</span>
+            </div>
+          </div>
+          <p class="foot">A hard set is a working set taken to RIR 4 or below. Fractional credits: a
+          chin-up is 1.0 to lats and 0.5 to biceps, so three chin-ups read as 1.5 biceps sets. Left
+          and right of a unilateral pair count once.</p>
+        </section>
+
+        <!-- ================= HISTORY ================= -->
+        <section class="screen" id="s-history">
+          <div class="apphead">
+            <div class="row">
+              <div>
+                <h1>History</h1>
+                <p class="sub">7 sessions · block 1</p>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="hrow">
+              <span><span class="d">SAT 19 SEP</span><div class="n">Day 1 — Quad + Pull</div></span>
+              <span class="s">4 sets<br><span style="color:var(--brass)">in progress</span></span>
+            </div>
+            <div class="hrow">
+              <span><span class="d">WED 16 SEP</span><div class="n">Day 3 — Full body top-up</div></span>
+              <span class="s">22 sets</span>
+            </div>
+            <div class="hrow">
+              <span><span class="d">SUN 14 SEP</span><div class="n">Day 2 — Push + Isolation</div>
+                <span class="pill slate" style="margin-top:6px">Compromised · sleep 4.5h</span></span>
+              <span class="s">18 sets</span>
+            </div>
+            <div class="hrow">
+              <span><span class="d">SAT 12 SEP</span><div class="n">Day 1 — Quad + Pull</div></span>
+              <span class="s">21 sets</span>
+            </div>
+            <div class="hrow">
+              <span><span class="d">WED 09 SEP</span><div class="n">Day 3 — Full body top-up</div></span>
+              <span class="s">20 sets</span>
+            </div>
+          </div>
+          <p class="foot">The 14 Sep session is marked compromised, so its numbers set no baseline and
+          trigger no regression. The engine skipped it and read 12 Sep instead.</p>
+        </section>
+      </div>
+
+      <!-- rest timer -->
+      <div class="timer" id="timer">
+        <div class="tt">
+          <span class="t" id="tclock">2:30</span>
+          <span class="lab">
+            <b>Rest — then</b>
+            <span id="tlabel">Set 3 of 3 · Flat Barbell Bench Press</span>
+          </span>
+        </div>
+        <div class="btns">
+          <button onclick="addTime()">+30 sec</button>
+          <button onclick="stopTimer()">Skip rest</button>
+        </div>
+        <span class="tbar" id="tbar"></span>
+      </div>
+
+      <!-- bottom nav -->
+      <nav class="nav">
+        <button aria-pressed="true" data-nav="today" onclick="go('today')">
+          <svg viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Today</button>
+        <button aria-pressed="false" data-nav="session" onclick="go('session')">
+          <svg viewBox="0 0 24 24"><path d="M6.5 9v6M17.5 9v6M3.5 10.5v3M20.5 10.5v3M6.5 12h11"/></svg>Session</button>
+        <button aria-pressed="false" data-nav="readiness" onclick="go('readiness')">
+          <svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 3 10 2.5-6 1.5 3h5"/></svg>Ready</button>
+        <button aria-pressed="false" data-nav="volume" onclick="go('volume')">
+          <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Volume</button>
+        <button aria-pressed="false" data-nav="history" onclick="go('history')">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>History</button>
+      </nav>
+    </div>
+  </div>
+
+  <p class="foot" style="max-width:76ch;margin:0 auto;text-align:center">
+    Design uplift of the Omega training-log mockup. Prescriptions, rationale strings and volume
+    credits are the real engine's output and are unchanged; the sessions behind them are invented.
+  </p>
+</div>
+
+<script>
+/* ---------------- data: unchanged from the original ---------------- */
+const EX = [
+  { id:'squat', name:'Barbell Back Squat', sets:5, lo:6, hi:8, rir:3, rest:180, incr:2.5,
+    reason:'first_time', w:null, verb:'Set a starting load',
+    rationale:'No qualifying history yet — set a starting load.',
+    prev:null, logged:[] },
+
+  { id:'chin', name:'Weighted Chin-Up', sets:4, lo:6, hi:8, rir:3, rest:180, incr:2.5,
+    reason:'requires_clearance', w:null, constrained:true, verb:'Bodyweight only until cleared',
+    rationale:'Held pending physio clearance: no load prescribed until the constraint is cleared. Sets may still be logged.',
+    cnote:'Bodyweight chin-ups are a far heavier elbow-flexion load than rehab curls. Confirm with physio before reintroducing.',
+    prev:null, logged:[] },
+
+  { id:'legext', name:'Leg Extension', sets:4, lo:10, hi:12, rir:3, rest:120, incr:5,
+    reason:'progress_load', w:45, verb:'Up 5 kg — reset to 10 reps',
+    rationale:'Last qualifying session 12 Sep: 40 kg × 12, 12, 12 at mean RIR 3 (target 3, range 10–12). Every set reached the top of the range with effort in hand → +5 kg to 45 kg, reset to 10 reps.',
+    prev:'40 kg × 12, 12, 12 @ RIR 3', logged:[] },
+
+  { id:'curl', name:'Incline Dumbbell Curl', sets:4, lo:15, hi:15, rir:3, rest:90, incr:1,
+    reason:'constrained', w:5, tempo:'3-0-3-0', constrained:true, verb:'At the 5 kg cap · 3-0-3-0 tempo',
+    rationale:'No qualifying history yet. Starting load 5 kg from the stored starting load. Injury constraint applies: starting at the 5 kg cap, minimum 15 reps, tempo 3-0-3-0.',
+    cnote:'Rehab phase. Seated only, avoid narrow grip. Escalate ~1 kg per 2 pain-free weeks. Stop on any tingling or numbness.',
+    prev:null, logged:[] },
+
+  { id:'lat', name:'Cable Lateral Raise', sets:5, lo:12, hi:15, rir:3, rest:90, incr:2.5,
+    reason:'progress_reps', w:7.5, bySet:[14,14,13,12,12], verb:'Hold the weight, add a rep',
+    rationale:'Last qualifying session 12 Sep: 7.5 kg × 13, 13, 12, 11 at mean RIR 3 (target 3, range 12–15). Not every set reached the top of the range → hold 7.5 kg and target one more rep per set (14, 14, 13, 12).',
+    prev:'7.5 kg × 13, 13, 12, 11 @ RIR 3', logged:[] },
+
+  { id:'bench', name:'Flat Barbell Bench Press', sets:3, lo:8, hi:10, rir:3, rest:150, incr:2.5,
+    reason:'consolidate', w:42.5, verb:'Hold — same weight, same reps',
+    rationale:'Last qualifying session 12 Sep: 42.5 kg × 10, 10, 10 at mean RIR 2 (target 3, range 8–10). Reps are there but mean RIR 2 is under the target 3 → hold 42.5 kg and the same reps until effort drops.',
+    prev:'42.5 kg × 10, 10, 10 @ RIR 2',
+    logged:[{w:42.5,r:10,rir:3,observed:true},{w:42.5,r:10,rir:3,observed:true}] },
+
+  { id:'abwheel', name:'Ab Wheel Rollout', sets:3, lo:8, hi:12, rir:3, rest:90, incr:0,
+    reason:'progress_reps', w:0, unloadable:true, bySet:[11,11,11], verb:'No load to add — add a rep',
+    rationale:'Last qualifying session 12 Sep: bodyweight × 10, 10, 10 at mean RIR 3 (target 3, range 8–12). Every set reached the top of the range but this exercise has no load increment → add a rep per set (11, 11, 11).',
+    prev:'Bodyweight × 10, 10, 10 @ RIR 3', logged:[] },
+];
+
+/* Reason chips. `constrained` is dropped as a chip because the violet edge and
+   the physio note already say it — it was appearing twice on the chin-up. */
+const REASON_LABEL = {
+  first_time:['first time','quiet'], requires_clearance:['awaiting clearance','slate'],
+  progress_load:['progress load','moss'], consolidate:['consolidate','brass'],
+  progress_reps:['progress reps','moss'], regress_load:['regress load','quiet'],
+  deload:['deload','quiet'], repeat_after_compromised:['repeat after compromised','quiet'],
+  constrained:['constrained','slate'],
+};
+const PAIN = ['none','niggle','moderate','stop'];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* which exercise is open — the accordion's whole state */
+let activeEx = 'bench';
+/* per-exercise RIR: null = the engine's assumption still stands */
+const rirState = {};
+
+function targetLine(e){
+  const reps = e.lo === e.hi ? e.lo : e.lo + '–' + e.hi;
+  return '<span class="num">' + e.sets + ' × ' + reps + '</span> @ RIR '
+       + '<span class="num">' + e.rir + '</span>'
+       + (e.tempo ? ' · <span class="num">' + e.tempo + '</span>' : '');
+}
+
+/* ---------------- collapsed row ---------------- */
+function rowFor(e){
+  const n = e.logged.length, done = n >= e.sets;
+  const wTxt = e.w === null ? 'not set' : (e.w === 0 ? 'bodyweight' : e.w + ' kg');
+  return '<button class="exrow' + (done?' done':'') + (e.constrained?' constrained':'') + '"'
+    + ' onclick="openEx(\'' + e.id + '\')" aria-expanded="false">'
+    + '<span class="tick">' + (done ? '✓' : (e.constrained ? '!' : '')) + '</span>'
+    + '<span style="min-width:0"><span class="nm">' + esc(e.name) + '</span>'
+    + '<span class="mt">' + REASON_LABEL[e.reason][0] + '</span></span>'
+    + '<span class="rt"><span class="w">' + wTxt + '</span>'
+    + '<span class="c">' + n + ' of ' + e.sets + '</span></span>'
+    + '</button>';
+}
+
+/* ---------------- the open card ---------------- */
+function cardFor(e){
+  const [lab, tone] = REASON_LABEL[e.reason];
+  /* `constrained` is already carried by the edge + the note; don't say it twice */
+  const chips = (e.reason === 'constrained' ? '' : '<span class="pill ' + tone + '">' + lab + '</span>')
+    + (e.unloadable ? '<span class="pill quiet">no load increment</span>' : '');
+
+  const wDisp = e.w === null
+    ? '<span class="engine-w none">Needs a starting load</span>'
+    : (e.w === 0 ? '<span class="engine-w">Bodyweight</span>'
+                 : '<span class="engine-w">' + e.w + '<small>kg</small></span>');
+
+  const banked = e.logged.map((s, i) =>
+    '<div class="bset"><span class="k">✓</span>'
+    + '<span class="v">' + s.w + ' <em>kg ×</em> ' + s.r + ' <em>· RIR</em> ' + s.rir
+    + (s.observed === false ? ' <em>(assumed)</em>' : '') + '</span></div>').join('');
+
+  const n = e.logged.length;
+  const workBlock = n < e.sets ? workFor(e, n)
+    : '<div class="work"><div class="work-lab"><span>All sets banked</span>'
+      + '<span class="num" style="color:var(--moss)">' + e.sets + ' / ' + e.sets + '</span></div></div>';
+
+  return '<article class="excard' + (e.constrained ? ' constrained' : '') + '" id="ex-' + e.id + '">'
+    + '<div class="exhead">'
+      + '<h3>' + esc(e.name) + '</h3>'
+      + '<div class="extarget">' + targetLine(e) + '</div>'
+      + (chips ? '<div class="exchips">' + chips + '</div>' : '')
+      + '<div class="engine" data-open="false">'
+        + '<button class="engine-top" onclick="toggleWhy(\'' + e.id + '\')">'
+          + '<span><span class="engine-lab">The engine says</span>' + wDisp
+          + '<span class="engine-verb">' + esc(e.verb) + '</span></span>'
+          + '<span class="why">Why<svg width="9" height="6" viewBox="0 0 9 6" fill="none" '
+          + 'stroke="currentColor" stroke-width="1.7"><path d="M1 1.5 4.5 5 8 1.5"/></svg></span>'
+        + '</button>'
+        + '<div class="rationale">' + esc(e.rationale)
+          + (e.prev ? '<span class="prev">Previous: ' + esc(e.prev) + '</span>' : '') + '</div>'
+      + '</div>'
+      + (e.cnote ? '<div class="cnote"><b>Physio note</b>' + esc(e.cnote) + '</div>' : '')
+    + '</div>'
+    + (banked ? '<div class="banked">' + banked + '</div>' : '')
+    + workBlock
+    + '</article>';
+}
+
+function workFor(e, n){
+  const reps = e.bySet ? (e.bySet[n] ?? e.lo) : e.lo;
+  const w = e.w === null ? '' : e.w;
+  const chosen = rirState[e.id];          /* undefined => the engine's guess stands */
+  const isSet = chosen !== undefined;
+
+  const rirBtns = [0,1,2,3,4,5].map(v => {
+    const pressed = isSet && v === chosen;
+    const assumed = !isSet && v === e.rir;
+    return '<button aria-pressed="' + pressed + '"'
+      + (assumed ? ' data-assumed="true"' : '')
+      + ' onclick="pickRir(\'' + e.id + '\',' + v + ')">' + v + '</button>';
+  }).join('');
+
+  return '<div class="work">'
+    + '<div class="work-lab"><span>Set ' + (n+1) + ' of ' + e.sets + '</span>'
+      + '<span class="num">' + n + ' banked</span></div>'
+    + '<div class="inputs">'
+      + '<div class="ifield"><label>Weight kg</label>'
+        + '<input class="inp" id="w-' + e.id + '" inputmode="decimal" value="' + w + '"'
+        + (e.unloadable ? ' disabled' : '') + '></div>'
+      + '<div class="ifield"><label>Reps</label>'
+        + '<input class="inp" id="r-' + e.id + '" inputmode="numeric" value="' + reps + '"></div>'
+    + '</div>'
+    + '<div class="rir-head"><span class="q">How hard was it?</span>'
+      + '<span class="s' + (isSet ? ' set' : '') + '">'
+      + (isSet ? 'you said ' + chosen : 'engine assumed ' + e.rir) + '</span></div>'
+    + '<div class="rir" id="rir-' + e.id + '">' + rirBtns + '</div>'
+    + '<div class="actions">'
+      + '<button class="pain" data-p="none" id="pain-' + e.id + '" onclick="cyclePain(\'' + e.id + '\')"'
+      + ' aria-label="Pain flag — currently none"><span class="glyph"></span>'
+      + '<span class="lbl">none</span></button>'
+      + '<button class="warm-t" aria-pressed="false" onclick="toggleWarm(this)"'
+      + ' aria-label="Mark as warmup set">W</button>'
+      + '<button class="log" onclick="logSet(\'' + e.id + '\')">Log set ' + (n+1) + ' ✓</button>'
+    + '</div>'
+    + '<input class="painnote" id="pn-' + e.id + '" placeholder="What did it feel like?">'
+    + '</div>';
+}
+
+function renderEx(){
+  document.getElementById('exlist').innerHTML =
+    EX.map(e => e.id === activeEx ? cardFor(e) : rowFor(e)).join('');
+  const done = EX.reduce((s,e) => s + e.logged.length, 0);
+  const all  = EX.reduce((s,e) => s + e.sets, 0);
+  document.getElementById('sprog-n').textContent = done + ' / ' + all + ' sets';
+  document.getElementById('sprog-bar').style.width = (done/all*100) + '%';
+}
+
+function openEx(id){
+  activeEx = id;
+  renderEx();
+  const el = document.getElementById('ex-' + id);
+  if (el) el.scrollIntoView({block:'start', behavior:'smooth'});
+}
+function toggleWhy(id){
+  const p = document.querySelector('#ex-' + id + ' .engine');
+  p.dataset.open = p.dataset.open === 'true' ? 'false' : 'true';
+}
+/* the honesty fix: choosing promotes assumed -> observed, and the label says so */
+function pickRir(id, v){
+  rirState[id] = v;
+  renderEx();
+}
+function cyclePain(id){
+  const b = document.getElementById('pain-' + id);
+  const next = PAIN[(PAIN.indexOf(b.dataset.p) + 1) % 4];
+  b.dataset.p = next;
+  b.querySelector('.lbl').textContent = next;
+  b.setAttribute('aria-label', 'Pain flag — currently ' + next);
+  document.getElementById('pn-' + id).classList.toggle('on', next !== 'none');
+}
+function toggleWarm(b){
+  b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true');
+}
+function logSet(id){
+  const e = EX.find(x => x.id === id);
+  const chosen = rirState[id];
+  e.logged.push({
+    w: parseFloat(document.getElementById('w-' + id).value) || 0,
+    r: parseInt(document.getElementById('r-' + id).value, 10) || 0,
+    rir: chosen !== undefined ? chosen : e.rir,
+    observed: chosen !== undefined,          /* the engine can now tell these apart */
+  });
+  delete rirState[id];                       /* next set asks again */
+  const nextN = e.logged.length;
+  renderEx();
+  if (nextN < e.sets) startTimer(e.rest, 'Set ' + (nextN+1) + ' of ' + e.sets + ' · ' + e.name);
+  else                startTimer(e.rest, 'Next exercise · ' + (EX[EX.indexOf(e)+1]?.name ?? 'finish session'));
+  const el = document.getElementById('ex-' + id);
+  if (el) el.scrollIntoView({block:'start', behavior:'smooth'});
+}
+
+/* ---------------- rest timer ---------------- */
+let endsAt = 0, total = 0, tick = null;
+function startTimer(sec, label){
+  total = sec; endsAt = Date.now() + sec*1000;
+  document.getElementById('tlabel').textContent = label;
+  document.getElementById('timer').classList.add('on');
+  clearInterval(tick); tick = setInterval(paint, 200); paint();
+}
+function paint(){
+  const left = Math.max(0, Math.round((endsAt - Date.now())/1000));
+  document.getElementById('tclock').textContent =
+    Math.floor(left/60) + ':' + String(left % 60).padStart(2,'0');
+  document.getElementById('tbar').style.width = (left/total*100) + '%';
+  if (left <= 0){ clearInterval(tick); document.getElementById('tclock').textContent = 'Go'; }
+}
+function addTime(){ endsAt += 30000; total += 30; paint(); }
+function stopTimer(){ clearInterval(tick); document.getElementById('timer').classList.remove('on'); }
+document.addEventListener('visibilitychange', () => { if(!document.hidden && endsAt) paint(); });
+
+/* ---------------- volume ---------------- */
+const VOL = [
+  ['Quads','quads',11.5,15,20],   ['Biceps','biceps',7.5,12,15],
+  ['Lateral delts','delts_lateral',9,10,15], ['Lats','lats',4.5,8,12],
+  ['Brachialis','brachialis',2,4,8], ['Hamstrings','hamstrings',7,6,10],
+  ['Upper back','upper_back',6.5,6,10], ['Triceps','triceps',6,6,10],
+  ['Rear delts','delts_rear',5,4,6], ['Abs','core_rectus',8,6,10],
+  ['Obliques','core_obliques',4.5,4,8], ['Mid chest','chest_mid',5,4,6],
+  ['Upper chest','chest_upper',4,3,5], ['Glutes','glutes',6.5,4,8],
+  ['Calves','calves',0,0,4], ['Front delts','delts_front',5.5,null,null],
+];
+function statusOf(v, lo, hi){
+  if (lo === null) return 'no_target';
+  return v < lo ? 'under' : v > hi ? 'over' : 'in_range';
+}
+/* The band is the target range, drawn so you can see it. Status then reads
+   from where the bar ends relative to the band — geometry first, colour second. */
+function strip(rows){
+  const CAP = 22;
+  return rows.map(([name, key, v, lo, hi]) => {
+    const st = statusOf(v, lo, hi);
+    const pct = Math.min(100, v / CAP * 100);
+    const band = lo === null ? '' :
+      '<span class="band" style="left:' + (lo/CAP*100) + '%;width:' + ((hi-lo)/CAP*100) + '%"></span>';
+    const tgt = lo === null ? '—' : lo + '–' + hi;
+    return '<div class="vrow"><span class="vname">' + name + '</span>'
+      + '<span class="track">' + band
+      + '<span class="fill ' + st + '" style="width:' + pct + '%"></span></span>'
+      + '<span class="vnum"><b>' + v + '</b> / ' + tgt + '</span></div>';
+  }).join('');
+}
+
+/* ---------------- readiness scales ---------------- */
+const PRESET = {sleepq:4, stress:2, motivation:4, 'sore-quads':3, 'sore-lats':2, 'sore-delts':1};
+function buildScales(){
+  document.querySelectorAll('[data-scale]').forEach(el => {
+    const sel = PRESET[el.dataset.scale];
+    el.innerHTML = [1,2,3,4,5].map(v =>
+      '<button aria-pressed="' + (v===sel) + '" onclick="pickScale(this)">' + v + '</button>').join('');
+  });
+}
+function pickScale(b){
+  [...b.parentNode.children].forEach(x => x.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true');
+}
+
+/* ---------------- navigation ---------------- */
+function go(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === 's-' + name));
+  document.querySelectorAll('.nav button').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.nav === name));
+  document.getElementById('viewport').scrollTop = 0;
+}
+
+renderEx();
+buildScales();
+/* one source for "how far in am I" — Today and Session cannot drift apart */
+(function(){
+  const done = EX.reduce((s,e)=>s+e.logged.length,0);
+  const all  = EX.reduce((s,e)=>s+e.sets,0);
+  document.getElementById('today-prog').textContent =
+    'In progress · ' + done + ' of ' + all + ' sets logged';
+})();
+document.getElementById('strip-today').innerHTML = strip(VOL.slice(0,5));
+document.getElementById('strip-full').innerHTML  = strip(VOL);
+startTimer(150, 'Set 3 of 3 · Flat Barbell Bench Press');
+</script>
+</body>
+</html>

@@ -109,7 +109,10 @@ The rulebook is `docs/ENGINE-RULES.md`. `POST /workouts` builds, per template ex
 
 It stores the prescription fields on the `workout_exercises` row and upserts `progression_state` with `next_state`.
 Stalls and baseline are derived from history by the engine; the API never feeds `progression_state` back except as the starting load.
-On write of a set with `is_amrap = true`, the API forces `rir = 0`. On unilateral exercises, `side` must be `left`/`right` and
+On write of a set with `is_amrap = true`, the API forces `rir = 0` and `rir_observed = true` (failure is an
+observation). `rir_observed` defaults to `true` when omitted, so importers and the coach are unaffected; the PWA
+must send `false` when its pre-filled RIR chip was never touched. See *The effort test* in `docs/ENGINE-RULES.md`
+for why an assumed RIR cannot trigger `progress_load`. On unilateral exercises, `side` must be `left`/`right` and
 left/right sets of one pair share `set_index`; bilateral exercises use `side = 'bilateral'`.
 When a user logs a first working set at a weight different from the suggestion, nothing special happens: the next
 prescription derives from what was actually lifted (`L.weight`).

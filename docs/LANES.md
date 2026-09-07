@@ -54,3 +54,35 @@ else is OS-neutral TypeScript and is split so the two Windows agents never edit 
 - PR template: `.github/pull_request_template.md` (lane, issue, what was run).
 - Commits: imperative subject, body lists behaviour changes. No model names in commits or code.
 - Line endings are LF via `.gitattributes`; Windows agents must not commit CRLF.
+
+## Open work from the design review
+
+`docs/DESIGN-REVIEW.md` holds the reasoning; this is the assignment. Items 1–3 are the ones that change
+behaviour rather than appearance, and 1 should land before any real training data accumulates.
+
+### core
+1. **The effort test.** Implement `docs/ENGINE-RULES.md` → *The effort test*: mean RIR for C3/C4 is computed over
+   non-AMRAP units with **observed** RIR; no observed RIR among non-AMRAP units means C3 cannot fire and the
+   prescription falls to `consolidate`; AMRAP-only exercises keep the existing allowance. Tests must cover the
+   four-row table in the review doc, which is the verified current behaviour and must change for row 1 only.
+2. Tighten `rir_observed` from optional to required once `api` and `web` both send it, and drop the
+   absent-means-true fallback in the same PR.
+
+### api
+3. **`rir_observed` column and migration.** Existing rows with a non-null `rir` migrate to `true`. Accept the
+   field on set create and patch, default `true` when omitted, and force `true` alongside `rir = 0` for AMRAP.
+4. `DELETE /workouts/:id/exercises/:weid` — removing an exercise from a running session has no endpoint.
+
+### web
+5. **The three exercise-management flows David asked for.** All three already exist in the API and are tested;
+   none is in the UI. A searchable library picker (use the seeded `aliases`), add-an-exercise mid-session, and
+   editing a routine's exercise list. Pair with item 4 for removal.
+6. **RIR honesty.** Send `rir_observed: false` unless the chip was touched. Render assumed as a dashed brass
+   outline and chosen as a solid chalk fill, with the label naming which — "engine assumed 3" → "you said 2".
+7. **Carry the uplift across.** `docs/mockup/omega-uplift.html` is the reference: one-owner colour contract,
+   accordion session, visible volume band, neutral treatment for a partial week's under-target, two type
+   families with mono reserved for measured quantities.
+8. **Demote readiness.** Off the bottom nav; move "today was rough" onto the session screen as one tap. Keep the
+   screen reachable, keep the endpoints.
+9. **On-device gate before M1 is done.** Dark-only legibility on a sweaty screen in direct sun, and one real
+   session logged with a pump between sets. Record the results in `apps/web/README.md`.
