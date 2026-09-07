@@ -1,0 +1,28 @@
+{
+  "name": "@omega/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "REST API + static host for the training log. Hono on Node 22 with the built-in node:sqlite driver (no native builds).",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node --no-warnings=ExperimentalWarning dist/server.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "seed": "tsx src/cli/seed.ts",
+    "migrate": "tsx src/cli/migrate.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.1",
+    "@omega/core": "workspace:*",
+    "hono": "4.13.7",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "26.4.1",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

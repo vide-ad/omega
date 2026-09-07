@@ -1,0 +1,30 @@
+{
+  "name": "@omega/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Installable PWA (iPhone-first) for logging sessions offline; syncs to @omega/api.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@omega/core": "workspace:*",
+    "dexie": "4.4.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "5.2.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vite-plugin-pwa": "1.3.0",
+    "vitest": "4.1.11",
+    "workbox-window": "^7.4.1"
+  }
+}
