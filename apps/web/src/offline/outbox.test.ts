@@ -18,16 +18,19 @@ function detail(): WorkoutDetail {
       workout_exercise: {
         id: WEID, workout_id: WID, exercise_id: 'e1', order: 1, target_sets: 3, target_rep_low: 8, target_rep_high: 10,
         target_rir: 2, suggested_weight_kg: 42, rest_seconds: 150, notes: null,
+        target_reps_by_set: null, target_tempo: null, last_set_amrap: false, reason: 'first_time', rationale: null,
+        flags: [], constraint_notes: [], based_on_workout_id: null, is_compromised: false,
       },
       exercise: {
         id: 'e1', name: 'Bench', aliases: [], equipment: 'barbell', movement_pattern: 'horizontal_press', is_unilateral: false,
         lengthened_bias: false, default_rep_low: 8, default_rep_high: 10, default_rir_target: 2, default_rest_seconds: 150,
-        weight_increment_kg: 2.5, demo_video_url: null, cues: null, archived: false, created_at: '2026-01-01T00:00:00.000Z',
+        weight_increment_kg: 2.5, uses_bodyweight: false, demo_video_url: null, cues: null, archived: false, created_at: '2026-01-01T00:00:00.000Z',
       },
       prescription: null,
       previous: null,
       sets: [],
     }],
+    omitted: [],
   };
 }
 

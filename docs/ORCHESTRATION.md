@@ -62,3 +62,7 @@ Simulator + a physical iPhone with Safari Web Inspector.
 - `create_session` → can spawn extra cloud workers for parallelisable core/API tasks when the laptops are busy.
 - `send_later` / Routines → scheduled check-ins (e.g. nightly "review open PRs").
 - `watch_url` → an inbound webhook if you want the droplet to report deploy status.
+
+---
+Tempo's cloud session for nudges: `claude -p "PR #N ready" --cloud session_01E8Vn6LWsdNeDZkpYTTtLLP`
+(cloud session ids rotate when a new PM session is started; update this line when that happens).
