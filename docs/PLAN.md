@@ -1,6 +1,6 @@
 # Omega — project plan
 
-**PM:** Tempo (Claude, cloud session). **Goal:** a phone-usable training log that replaces Strong, with an
+**PM:** Chalk (Claude, cloud session). **Goal:** a phone-usable training log that replaces Strong, with an
 LLM-coach API, in real use for one full mesocycle before anything fancier.
 
 ## Status against the spec's build order (§10)
@@ -41,7 +41,7 @@ LLM-coach API, in real use for one full mesocycle before anything fancier.
 ## Open questions for the user
 
 1. Channel name for Omega and who creates it (`bridge.py create <name>` also wires the bot). Resolved: agent-bridge
-   is David's own `D:\Coding\bridge.py`; see `docs/ORCHESTRATION.md` for how each lane reaches it and why tempo
+   is David's own `D:\Coding\bridge.py`; see `docs/ORCHESTRATION.md` for how each lane reaches it and why chalk
    uses the Claude Slack connector instead.
 2. Hostname for the droplet (buy a domain vs DuckDNS). Needed before the iPhone install.
 3. Apple Watch? Decides the free Shortcuts path for cardio import.

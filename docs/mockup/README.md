@@ -34,4 +34,4 @@ Worth an opinion on:
 - Whether **`Set a starting load`** (the `first_time` case, e.g. the squat) reads as a prompt or as
   an error.
 
-The type is Archivo (display), Barlow (body) and IBM Plex Mono (all figures and the tempo string).
+The type is Archivo (display), Barlow (body) and IBM Plex Mono (all figures and the chalk string).

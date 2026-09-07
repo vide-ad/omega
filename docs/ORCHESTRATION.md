@@ -1,6 +1,6 @@
 # Agent orchestration
 
-Agents on Omega: **tempo** (PM, cloud session on claude.ai/code), plus three worker lanes.
+Agents on Omega: **chalk** (PM, cloud session on claude.ai/code), plus three worker lanes.
 One human (David), mostly on a phone. Workspace: **Wren, Cass & Co**.
 
 Full bridge instructions: `docs/agent-bridge.md` (a copy of David's canonical doc, kept here for
@@ -21,10 +21,10 @@ about **which decisions are of record**, not about the channel.
 |---|---|
 | Channel | `#project-omega` |
 | Id | `C0C03JVQWSJ` |
-| Bot is a member | **No — David must run `/invite @agentbridge` in the channel.** Nothing works until `bridge.py check` reports `member=True`. |
+| Bot is a member | **Yes** — David invited it on 8 Sep; verified by listing the channel's members. `bridge.py check` should report `member=True`. |
 
-I created the channel through the Claude connector rather than `bridge.py create`, which is why the
-bot was never added. The invite is the single most common reason a new agent cannot post.
+The channel was created through the Claude connector rather than `bridge.py create`, so the bot had to
+be invited separately. That missing invite is the single most common reason a new agent cannot post.
 
 ## Setup for a worker lane
 
@@ -46,7 +46,8 @@ On joining, `peek 50` to catch up — a fresh cursor's first `read` returns only
 
 `BRIDGE_NAME` must be **unique per agent**. Two agents sharing a name are invisible to each other
 while everyone else sees both, and it fails silently. Names already taken across the workspace:
-`corvus`, `cass`, `wren`, `lyra`, and now `tempo`. Suggested for Omega's lanes, David's call —
+`corvus`, `cass`, `wren`, `lyra`, and now `chalk`. `tempo` was used for the first two posts on
+`#project-omega` and is retired — do not reuse it. Suggested for Omega's lanes, David's call —
 `swift` (web/Mac), `kestrel` (api/PC back-end), `tern` (core/PC coder).
 
 ## How each Omega agent reaches the channel
@@ -56,18 +57,18 @@ while everyone else sees both, and it fails silently. Names already taken across
 | web (Mac) | `bridge.py` via the Keychain token above |
 | api (PC back-end) | `bridge.py`, own `BRIDGE_NAME`, own terminal |
 | core (PC coder) | `bridge.py`, own `BRIDGE_NAME`, own worktree and terminal |
-| **tempo** (PM) | **Not `bridge.py`** — a Linux cloud container with no `D:` drive and no `SLACK_BOT_TOKEN`. Posts through the Claude Slack connector, the route `wren` uses on North: messages appear under David's account with a *Sent using Claude* footer, and the `[tempo]` prefix is the label. |
+| **chalk** (PM) | **Not `bridge.py`** — a Linux cloud container with no `D:` drive and no `SLACK_BOT_TOKEN`. Posts through the Claude Slack connector, the route `wren` uses on North: messages appear under David's account with a *Sent using Claude* footer, and the `[chalk]` prefix is the label. |
 
-Three consequences of tempo's route, all verified rather than assumed:
+Three consequences of chalk's route, all verified rather than assumed:
 
-- **Markdown is converted for tempo, not for you.** Slack mrkdwn uses *single* asterisks for bold;
+- **Markdown is converted for chalk, not for you.** Slack mrkdwn uses *single* asterisks for bold;
   doubled asterisks render literally. The connector converts standard Markdown on the way out (checked
-  by reading the posted message back), so tempo writes `**bold**` and Slack shows bold. A `bridge.py`
+  by reading the posted message back), so chalk writes `**bold**` and Slack shows bold. A `bridge.py`
   agent must write `*bold*`, `_italic_`, `~strike~`, `` `code` `` itself.
-- **tempo has no read cursor**, so it reads by timestamp rather than "since last read", and **nothing
-  wakes it**. A question for tempo sits unread until David prompts it or a scheduled check-in fires.
+- **chalk has no read cursor**, so it reads by timestamp rather than "since last read", and **nothing
+  wakes it**. A question for chalk sits unread until David prompts it or a scheduled check-in fires.
   Say in the message if something is urgent.
-- **tempo can read its own posts**; `bridge.py` agents cannot (`read` filters out your own
+- **chalk can read its own posts**; `bridge.py` agents cannot (`read` filters out your own
   `BRIDGE_NAME`). Trust the command's exit status instead — silent and exit 0 means it sent.
 
 ## What the bridge is and is not
@@ -105,7 +106,7 @@ channel, because uncorrected claims become other agents' assumptions.
   assumptions, need a decision. Silence reads as nothing happening.
 - Say **what you verified and how**. "Deployed and returns 200" beats "should be working". If you did
   not check, say so.
-- Route explicitly: `NEEDS DAVID` for his hands, data, money or devices; `NEEDS TEMPO` for scope,
+- Route explicitly: `NEEDS DAVID` for his hands, data, money or devices; `NEEDS CHALK` for scope,
   contract and cross-lane calls; name the agent otherwise.
 - **Verify before repeating.** A claim on the channel is another agent's assertion — check it against
   the code or the live system before restating it as fact, and say which you did.
@@ -113,11 +114,11 @@ channel, because uncorrected claims become other agents' assumptions.
 ## Work protocol (complementary to the bridge)
 
 1. **Tasks live in GitHub Issues** on `vide-ad/omega`, labelled `lane:web` / `lane:api` / `lane:core` /
-   `lane:pm`, written by tempo with acceptance criteria and the files each touches. The issue is the
+   `lane:pm`, written by chalk with acceptance criteria and the files each touches. The issue is the
    assignment; the channel is where you say you picked it up. No self-assigning across lanes.
 2. **One branch, one PR per issue**: `lane/<lane>/<issue>-<slug>`, body says `Closes #N` and what was run.
 3. **Directory ownership is strict** (`docs/LANES.md`); separate worktrees for the two PC agents.
 4. **CI is the gate**: `.github/workflows/ci.yml` (Ubuntu + Windows). `main` protected, squash-merge.
 5. **Done = PR ready + CI green + a post on the channel.**
-6. **tempo reviews**, requests changes or approves, then asks David to merge. tempo never merges.
+6. **chalk reviews**, requests changes or approves, then asks David to merge. chalk never merges.
 7. **Deploys** go from merged `main` only, by the api lane on the droplet — never from a laptop checkout.

@@ -14,7 +14,7 @@ Start every conversation with GET /summary?weeks=4 and read it fully before sayi
   7-day blocks from the mesocycle start (a Saturday). The current week is marked partial.
 - Readiness: GET /readiness gives bodyweight, resting HR, sleep, soreness, and rolling medians. Sessions marked
   is_compromised were excluded from progression decisions on purpose; do not treat their numbers as regressions.
-- Injuries: GET /injuries lists active constraints (load caps, minimum reps, tempo, clearance gates). The engine
+- Injuries: GET /injuries lists active constraints (load caps, minimum reps, chalk, clearance gates). The engine
   already enforces them; your job is to judge when a cap should move, and to say so as a proposal.
 Rules of engagement:
 - The progression engine's reason + rationale explain every suggested load. Argue with the engine only with data.

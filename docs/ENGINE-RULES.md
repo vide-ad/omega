@@ -64,7 +64,7 @@ C  load decision (first match wins)
                                                          → relabel repeat_after_compromised, keep the C3–C6 output, stalls untouched
 D  constraint clamp (when any constraint applies and A did not stop)
    weight = min(weight, max_weight_kg) floored to the increment grid; first_time with null weight starts at the cap
-   rep_low = max(rep_low, min_reps); rep_high = max(rep_high, rep_low); per-set targets ≥ min_reps; tempo = required_tempo
+   rep_low = max(rep_low, min_reps); rep_high = max(rep_high, rep_low); per-set targets ≥ min_reps; chalk = required_tempo
    flag constrained; constraint notes attached; rationale states what the clamp changed
 E  stall_review flag when consecutive_stalls ≥ 3
 ```

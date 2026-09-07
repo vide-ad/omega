@@ -1,14 +1,14 @@
 # Lanes and ownership
 
 Agent names for the channel (`BRIDGE_NAME`) must be unique across the whole workspace. Taken:
-`corvus`, `cass`, `wren`, `lyra`, `tempo`. Suggested for the worker lanes, David's call — `swift`
+`corvus`, `cass`, `wren`, `lyra`, `chalk` (and `tempo`, briefly used and now retired — do not reuse). Suggested for the worker lanes, David's call — `swift`
 (web/Mac), `kestrel` (api/PC back-end), `tern` (core/PC coder). Channel `#project-omega`,
 `SLACK_BRIDGE_CHANNEL=C0C03JVQWSJ`. Setup and conventions: `docs/ORCHESTRATION.md`, full instructions
 `docs/agent-bridge.md`.
 
 | Lane | Machine | Owns (write access) | Never touches |
 |---|---|---|---|
-| **pm** (Tempo) | cloud | `docs/**`, `packages/core/src/api-types.ts`, `docs/API.md`, `docs/ENGINE-RULES.md`, `.github/**`, root configs | app internals |
+| **pm** (Chalk) | cloud | `docs/**`, `packages/core/src/api-types.ts`, `docs/API.md`, `docs/ENGINE-RULES.md`, `.github/**`, root configs | app internals |
 | **web** | Mac | `apps/web/**` | `apps/api`, `packages/core` (except via a pm issue) |
 | **api** | PC (back-end) | `apps/api/**`, `deploy/**`, the droplet | `apps/web`, engine semantics in `packages/core` |
 | **core** | PC (coder), own git worktree | `packages/core/**` (engine hardening, seeds, golden scenarios), `apps/api/test/contract/**` | route implementations, screens |
@@ -42,7 +42,7 @@ else is OS-neutral TypeScript and is split so the two Windows agents never edit 
 ## Handover rules between lanes
 
 - Contract changes (`packages/core/src/api-types.ts`, `docs/API.md`) and engine semantics
-  (`docs/ENGINE-RULES.md`) are `lane:pm`. Propose on the channel, tempo rules, tempo commits, then both sides
+  (`docs/ENGINE-RULES.md`) are `lane:pm`. Propose on the channel, chalk rules, chalk commits, then both sides
   build against the committed text — never against the Slack message.
 - The core lane writes `apps/api/test/contract/**`; the api lane makes those tests green. Neither edits the
   other's half.
