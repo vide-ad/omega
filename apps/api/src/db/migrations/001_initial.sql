@@ -1,6 +1,6 @@
--- 001_initial: every table from spec §3 plus the §8 reserved tables.
+-- 001_initial: every table from spec §3 (as extended by packages/core/src/types.ts) plus the §8 reserved tables.
 -- Conventions: ids are UUID TEXT; booleans are INTEGER 0/1; arrays/objects are JSON TEXT;
--- dates are 'YYYY-MM-DD' TEXT; timestamps are ISO 8601 UTC TEXT.
+-- dates are 'YYYY-MM-DD' TEXT; timestamps are ISO 8601 UTC TEXT; weights are kg REAL.
 
 CREATE TABLE IF NOT EXISTS muscle_groups (
   key           TEXT PRIMARY KEY,
@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS muscle_groups (
 CREATE TABLE IF NOT EXISTS exercises (
   id                   TEXT PRIMARY KEY,
   name                 TEXT NOT NULL,
-  aliases              TEXT NOT NULL DEFAULT '[]',
-  equipment            TEXT NOT NULL,
+  aliases              TEXT NOT NULL DEFAULT '[]',          -- JSON string[]
+  equipment            TEXT NOT NULL CHECK (equipment IN ('barbell','dumbbell','cable','machine','bodyweight','other')),
   movement_pattern     TEXT NOT NULL,
   is_unilateral        INTEGER NOT NULL DEFAULT 0,
   lengthened_bias      INTEGER NOT NULL DEFAULT 0,
@@ -21,13 +21,15 @@ CREATE TABLE IF NOT EXISTS exercises (
   default_rir_target   INTEGER NOT NULL,
   default_rest_seconds INTEGER NOT NULL,
   weight_increment_kg  REAL NOT NULL,
+  uses_bodyweight      INTEGER NOT NULL DEFAULT 0,
   demo_video_url       TEXT,
   cues                 TEXT,
   archived             INTEGER NOT NULL DEFAULT 0,
   created_at           TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_exercises_name ON exercises(name);
+CREATE INDEX IF NOT EXISTS idx_exercises_name ON exercises(name, id);
 CREATE INDEX IF NOT EXISTS idx_exercises_pattern ON exercises(movement_pattern);
+CREATE INDEX IF NOT EXISTS idx_exercises_archived ON exercises(archived);
 
 CREATE TABLE IF NOT EXISTS exercise_muscle_credits (
   exercise_id       TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
@@ -48,6 +50,7 @@ CREATE TABLE IF NOT EXISTS injuries (
   notes         TEXT,
   physio_notes  TEXT
 );
+CREATE INDEX IF NOT EXISTS idx_injuries_status ON injuries(status);
 
 CREATE TABLE IF NOT EXISTS exercise_constraints (
   id                  TEXT PRIMARY KEY,
@@ -58,22 +61,24 @@ CREATE TABLE IF NOT EXISTS exercise_constraints (
   min_reps            INTEGER,
   required_tempo      TEXT,
   requires_clearance  INTEGER NOT NULL DEFAULT 0,
+  cleared_at          TEXT,                                -- non-null once physio clearance is granted
   blocked             INTEGER NOT NULL DEFAULT 0,
   note                TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_constraints_injury ON exercise_constraints(injury_id);
 CREATE INDEX IF NOT EXISTS idx_constraints_exercise ON exercise_constraints(exercise_id);
+CREATE INDEX IF NOT EXISTS idx_constraints_pattern ON exercise_constraints(movement_pattern);
 
 CREATE TABLE IF NOT EXISTS mesocycles (
   id             TEXT PRIMARY KEY,
   name           TEXT NOT NULL,
   start_date     TEXT NOT NULL,
-  planned_weeks  INTEGER NOT NULL,
+  planned_weeks  INTEGER NOT NULL CHECK (planned_weeks >= 1),
   deload_week    INTEGER NOT NULL,
   status         TEXT NOT NULL CHECK (status IN ('planned','active','complete','abandoned')),
   notes          TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_mesocycles_status ON mesocycles(status);
+CREATE INDEX IF NOT EXISTS idx_mesocycles_status ON mesocycles(status, start_date);
 
 CREATE TABLE IF NOT EXISTS mesocycle_weeks (
   mesocycle_id       TEXT NOT NULL REFERENCES mesocycles(id) ON DELETE CASCADE,
@@ -86,8 +91,9 @@ CREATE TABLE IF NOT EXISTS mesocycle_weeks (
   PRIMARY KEY (mesocycle_id, week_number)
 );
 
--- The template row always holds the LATEST version. Older versions are kept as immutable
--- history in template_versions (name/day_label snapshot) + template_exercises (rows per version).
+-- The template row always holds the LATEST version. Every version's exercise list is kept as
+-- immutable history in template_exercises keyed by (template_id, template_version); the
+-- (name, day_label) of each version is snapshotted in template_versions.
 CREATE TABLE IF NOT EXISTS workout_templates (
   id            TEXT PRIMARY KEY,
   name          TEXT NOT NULL,
@@ -97,6 +103,7 @@ CREATE TABLE IF NOT EXISTS workout_templates (
   mesocycle_id  TEXT REFERENCES mesocycles(id) ON DELETE SET NULL,
   archived      INTEGER NOT NULL DEFAULT 0
 );
+CREATE INDEX IF NOT EXISTS idx_templates_order ON workout_templates(archived, "order", name);
 
 CREATE TABLE IF NOT EXISTS template_versions (
   template_id  TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
@@ -127,7 +134,7 @@ CREATE INDEX IF NOT EXISTS idx_template_exercises_exercise ON template_exercises
 
 CREATE TABLE IF NOT EXISTS readiness_logs (
   id                  TEXT PRIMARY KEY,
-  date                TEXT NOT NULL,
+  date                TEXT NOT NULL UNIQUE,
   bodyweight_kg       REAL,
   resting_hr          INTEGER,
   sleep_hours         REAL,
@@ -137,7 +144,6 @@ CREATE TABLE IF NOT EXISTS readiness_logs (
   manual_compromised  INTEGER NOT NULL DEFAULT 0,
   notes               TEXT
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_readiness_date ON readiness_logs(date);
 
 CREATE TABLE IF NOT EXISTS soreness_entries (
   readiness_id      TEXT NOT NULL REFERENCES readiness_logs(id) ON DELETE CASCADE,
@@ -162,7 +168,10 @@ CREATE TABLE IF NOT EXISTS workouts (
 );
 CREATE INDEX IF NOT EXISTS idx_workouts_date ON workouts(date, id);
 CREATE INDEX IF NOT EXISTS idx_workouts_template ON workouts(template_id);
+CREATE INDEX IF NOT EXISTS idx_workouts_completed ON workouts(completed_at);
+CREATE INDEX IF NOT EXISTS idx_workouts_readiness ON workouts(readiness_id);
 
+-- Stored prescription (engine output at instantiation; immutable history) lives on the row.
 CREATE TABLE IF NOT EXISTS workout_exercises (
   id                    TEXT PRIMARY KEY,
   workout_id            TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
@@ -175,8 +184,15 @@ CREATE TABLE IF NOT EXISTS workout_exercises (
   suggested_weight_kg   REAL,
   rest_seconds          INTEGER NOT NULL,
   notes                 TEXT,
-  prescription          TEXT,             -- JSON Prescription from the engine, null for hand-added rows without one
-  based_on_workout_id   TEXT REFERENCES workouts(id) ON DELETE SET NULL
+  target_reps_by_set    TEXT,                              -- JSON number[] | null
+  target_tempo          TEXT,
+  last_set_amrap        INTEGER NOT NULL DEFAULT 0,
+  reason                TEXT,                              -- PrescriptionReason | null (ad-hoc rows)
+  rationale             TEXT,
+  flags                 TEXT NOT NULL DEFAULT '[]',        -- JSON PrescriptionFlag[]
+  constraint_notes      TEXT NOT NULL DEFAULT '[]',        -- JSON string[]
+  based_on_workout_id   TEXT REFERENCES workouts(id) ON DELETE SET NULL,
+  is_compromised        INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_workout_exercises_workout ON workout_exercises(workout_id, "order");
 CREATE INDEX IF NOT EXISTS idx_workout_exercises_exercise ON workout_exercises(exercise_id);
@@ -195,7 +211,7 @@ CREATE TABLE IF NOT EXISTS set_logs (
   rest_taken_seconds    INTEGER,
   pain_severity         TEXT NOT NULL DEFAULT 'none' CHECK (pain_severity IN ('none','niggle','moderate','stop')),
   pain_note             TEXT,
-  media_id              TEXT,             -- future §8; no FK to avoid a cycle with media_assets
+  media_id              TEXT,                              -- future §8; no FK to avoid a cycle with media_assets
   completed_at          TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_set_logs_workout_exercise ON set_logs(workout_exercise_id, set_index);
@@ -211,12 +227,12 @@ CREATE TABLE IF NOT EXISTS cardio_sessions (
   distance_km        REAL,
   avg_hr             INTEGER,
   max_hr             INTEGER,
-  zone_minutes       TEXT,               -- JSON object
+  zone_minutes       TEXT,                                 -- JSON Record<string, number>
   perceived_effort   INTEGER,
   source             TEXT NOT NULL CHECK (source IN ('manual','apple_health','import')),
   notes              TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_cardio_date ON cardio_sessions(date);
+CREATE INDEX IF NOT EXISTS idx_cardio_date ON cardio_sessions(date, id);
 
 CREATE TABLE IF NOT EXISTS muscle_volume_targets (
   muscle_group_key  TEXT PRIMARY KEY REFERENCES muscle_groups(key),
@@ -252,13 +268,13 @@ CREATE TABLE IF NOT EXISTS pose_metrics (
   set_id                     TEXT NOT NULL REFERENCES set_logs(id) ON DELETE CASCADE,
   reps_detected              INTEGER NOT NULL,
   rom_degrees_mean           REAL,
-  rom_degrees_by_rep         TEXT,        -- JSON number[]
+  rom_degrees_by_rep         TEXT,                         -- JSON number[]
   concentric_ms_mean         REAL,
   eccentric_ms_mean          REAL,
   tempo_degradation_pct      REAL,
   path_deviation_mm          REAL,
   left_right_asymmetry_pct   REAL,
-  key_joint_angles           TEXT,        -- JSON Record<string, number[]>
+  key_joint_angles           TEXT,                         -- JSON Record<string, number[]>
   model                      TEXT NOT NULL,
   confidence_mean            REAL NOT NULL
 );

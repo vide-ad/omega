@@ -8,19 +8,20 @@ LLM-coach API, in real use for one full mesocycle before anything fancier.
 | # | Step | State | Where |
 |---|---|---|---|
 | 1 | Schema + exercise library + credits + seed | **done** (core), API schema in progress | `packages/core/src/{types,seed}` |
-| 2 | Templates → sessions → set logging + rest timer | in progress (API + PWA being built) | `apps/api`, `apps/web` |
-| 3 | Readiness log + pain flags | in progress (same build) | same |
-| 4 | Volume accounting + dashboard | engine **done**; dashboard in progress | `packages/core/src/engine/volume.ts` |
+| 2 | Templates → sessions → set logging + rest timer | **done**, verified end to end | `apps/api`, `apps/web` |
+| 3 | Readiness log + pain flags | **done** | `apps/api/src/routes/readiness.ts`, `apps/web/src/screens/Readiness.tsx` |
+| 4 | Volume accounting + dashboard | **done** | `packages/core/src/engine/volume.ts`, `apps/web/src/screens/Volume.tsx` |
 | 5 | Progression engine | **done**, audited, 51 tests | `packages/core/src/engine/progression.ts`, `docs/ENGINE-RULES.md` |
-| 6 | API + auth | in progress | `apps/api`, `docs/API.md` |
+| 6 | API + auth | **done** (two tokens; coach proposals deferred to M3) | `apps/api`, `docs/API.md` |
 | 7 | Cardio import | manual `POST /cardio` in MVP; Shortcuts recipe is an api-lane issue | |
 | 8 | Pose metrics | schema reserved only (`MediaAsset`, `PoseMetrics`, tables created) | |
 
 ## Milestones
 
 - **M0 — foundation (this session):** monorepo, core types/seed/engine, contract, CI, deploy files, docs. ✔
-- **M1 — on the phone:** API + PWA verified end to end in the sandbox; deployed to the droplet under HTTPS;
-  installed on the iPhone; one real session logged. *Blocked on: hostname, droplet access (api lane), iPhone check (web lane).*
+- **M1 — on the phone:** API + PWA verified end to end in the sandbox ✔ (129 tests; live server drives seed → session →
+  sets → completion → volume → week 2, and serves the installable PWA). Remaining: deploy to the droplet under HTTPS,
+  install on the iPhone, log one real session. *Blocked on: hostname + droplet access (api lane), iPhone check (web lane).*
 - **M2 — replaces Strong:** readiness form in daily use, volume dashboard, coach reading `/summary`, backups.
 - **M3 — coach loop:** proposals (pending_review) with in-app accept/reject, `/prescriptions/preview`, Apple Health cardio import.
 - **M4 — one full mesocycle in real use**, then decide on pose metrics.

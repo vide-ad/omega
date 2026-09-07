@@ -5,7 +5,7 @@
  */
 import { api, ApiError, isNetworkError, type RequestOptions } from '../api/client.js';
 import { applyPending, type Stores } from './outbox.js';
-import { getStores } from './sync.js';
+import { getStores, recentlyConfirmedOps } from './sync.js';
 
 export interface CachedResult<T> {
   data: T;
@@ -30,7 +30,9 @@ export async function cachedGet<T>(key: string, path: string, opts: CachedGetOpt
       if (opts.notFoundAsNull && e instanceof ApiError && e.status === 404) data = null as T;
       else throw e;
     }
-    const pending = await stores.outbox.list();
+    // Re-apply ops that are still queued *and* ops confirmed moments ago (a GET that left before
+    // the server applied them would otherwise clobber the optimistic state). Both are idempotent.
+    const pending = [...(opts.stores ? [] : recentlyConfirmedOps()), ...(await stores.outbox.list())];
     const merged = pending.length ? (applyPending(key, data, pending) as T) : data;
     await stores.cache.set(key, merged);
     return { data: merged, fromCache: false, error: null };

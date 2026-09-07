@@ -53,10 +53,19 @@ export function getWeek(db: Db, mesocycleId: string, weekNumber: number): Mesocy
   return r ? rowToWeek(r) : null;
 }
 
+export function insertMesocycle(db: Db, m: Mesocycle): void {
+  db.run(`INSERT INTO mesocycles (${MESO_COLS}) VALUES ($id, $name, $start_date, $planned_weeks, $deload_week, $status, $notes)`, { ...m });
+}
+
 export function upsertMesocycle(db: Db, m: Mesocycle): void {
   db.run(`INSERT INTO mesocycles (${MESO_COLS}) VALUES ($id, $name, $start_date, $planned_weeks, $deload_week, $status, $notes)
     ON CONFLICT(id) DO UPDATE SET name = excluded.name, start_date = excluded.start_date, planned_weeks = excluded.planned_weeks,
       deload_week = excluded.deload_week, status = excluded.status, notes = excluded.notes`, { ...m });
+}
+
+export function updateMesocycle(db: Db, m: Mesocycle): void {
+  db.run(`UPDATE mesocycles SET name = $name, start_date = $start_date, planned_weeks = $planned_weeks, deload_week = $deload_week, status = $status,
+    notes = $notes WHERE id = $id`, { ...m });
 }
 
 export function upsertWeek(db: Db, w: MesocycleWeek): void {
@@ -70,7 +79,7 @@ export function replaceWeeks(db: Db, mesocycleId: string, weeks: ReadonlyArray<O
   for (const w of weeks) upsertWeek(db, { ...w, mesocycle_id: mesocycleId });
 }
 
-/** Spec/API: activating a block demotes every other active block to `complete`. */
+/** API: activating a block demotes every other active block to `complete`. */
 export function demoteOtherActive(db: Db, exceptId: string): void {
   db.run(`UPDATE mesocycles SET status = 'complete' WHERE status = 'active' AND id != $id`, { id: exceptId });
 }

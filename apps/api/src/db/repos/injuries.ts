@@ -1,6 +1,6 @@
 import type { ExerciseConstraint, Injury } from '@omega/core';
 import type { Db, Row } from '../connection.js';
-import { bool, numOrNull, str, strOrNull } from '../mappers.js';
+import { bool, numOrNull, str, strOrNull, omit } from '../mappers.js';
 
 export function rowToInjury(r: Row): Injury {
   return {
@@ -25,29 +25,33 @@ export function rowToConstraint(r: Row): ExerciseConstraint {
     min_reps: numOrNull(r.min_reps),
     required_tempo: strOrNull(r.required_tempo),
     requires_clearance: bool(r.requires_clearance),
+    cleared_at: strOrNull(r.cleared_at),
     blocked: bool(r.blocked),
     note: strOrNull(r.note),
   };
 }
 
 const INJURY_COLS = 'id, name, region, status, started_at, resolved_at, notes, physio_notes';
-const CONSTRAINT_COLS = 'id, injury_id, exercise_id, movement_pattern, max_weight_kg, min_reps, required_tempo, requires_clearance, blocked, note';
+const CONSTRAINT_COLS = 'id, injury_id, exercise_id, movement_pattern, max_weight_kg, min_reps, required_tempo, requires_clearance, cleared_at, blocked, note';
+const CONSTRAINT_VALUES = '$id, $injury_id, $exercise_id, $movement_pattern, $max_weight_kg, $min_reps, $required_tempo, $requires_clearance, $cleared_at, $blocked, $note';
 
 export function getInjury(db: Db, id: string): Injury | null {
   const r = db.get(`SELECT ${INJURY_COLS} FROM injuries WHERE id = $id`, { id });
   return r ? rowToInjury(r) : null;
 }
 
+/** `live` = active or monitoring (the injuries whose constraints apply). */
 export function listInjuries(db: Db, status?: Injury['status'] | 'live'): Injury[] {
-  if (status === 'live') return db.all(`SELECT ${INJURY_COLS} FROM injuries WHERE status != 'resolved' ORDER BY started_at DESC, id`).map(rowToInjury);
-  if (status) return db.all(`SELECT ${INJURY_COLS} FROM injuries WHERE status = $status ORDER BY started_at DESC, id`, { status }).map(rowToInjury);
-  return db.all(`SELECT ${INJURY_COLS} FROM injuries ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'monitoring' THEN 1 ELSE 2 END, started_at DESC, id`).map(rowToInjury);
+  const order = "CASE status WHEN 'active' THEN 0 WHEN 'monitoring' THEN 1 ELSE 2 END, started_at DESC, id";
+  if (status === 'live') return db.all(`SELECT ${INJURY_COLS} FROM injuries WHERE status != 'resolved' ORDER BY ${order}`).map(rowToInjury);
+  if (status) return db.all(`SELECT ${INJURY_COLS} FROM injuries WHERE status = $status ORDER BY ${order}`, { status }).map(rowToInjury);
+  return db.all(`SELECT ${INJURY_COLS} FROM injuries ORDER BY ${order}`).map(rowToInjury);
 }
 
 export function upsertInjury(db: Db, i: Injury): void {
   db.run(`INSERT INTO injuries (${INJURY_COLS}) VALUES ($id, $name, $region, $status, $started_at, $resolved_at, $notes, $physio_notes)
-    ON CONFLICT(id) DO UPDATE SET name = excluded.name, region = excluded.region, status = excluded.status, started_at = excluded.started_at,
-      resolved_at = excluded.resolved_at, notes = excluded.notes, physio_notes = excluded.physio_notes`, { ...i });
+    ON CONFLICT(id) DO UPDATE SET name = excluded.name, region = excluded.region, started_at = excluded.started_at,
+      notes = COALESCE(injuries.notes, excluded.notes), physio_notes = COALESCE(injuries.physio_notes, excluded.physio_notes)`, { ...i });
 }
 
 export function insertInjury(db: Db, i: Injury): void {
@@ -57,6 +61,10 @@ export function insertInjury(db: Db, i: Injury): void {
 export function updateInjury(db: Db, i: Injury): void {
   db.run(`UPDATE injuries SET name = $name, region = $region, status = $status, started_at = $started_at, resolved_at = $resolved_at,
     notes = $notes, physio_notes = $physio_notes WHERE id = $id`, { ...i });
+}
+
+export function deleteInjury(db: Db, id: string): boolean {
+  return db.run('DELETE FROM injuries WHERE id = $id', { id }).changes > 0;
 }
 
 export function getConstraint(db: Db, id: string): ExerciseConstraint | null {
@@ -69,23 +77,23 @@ export function listConstraints(db: Db, injuryId?: string): ExerciseConstraint[]
   return db.all(`SELECT ${CONSTRAINT_COLS} FROM exercise_constraints ORDER BY rowid`).map(rowToConstraint);
 }
 
+/** Seed upsert: a clearance already granted in the database is never revoked by re-seeding. */
 export function upsertConstraint(db: Db, c: ExerciseConstraint): void {
-  db.run(`INSERT INTO exercise_constraints (${CONSTRAINT_COLS}) VALUES ($id, $injury_id, $exercise_id, $movement_pattern, $max_weight_kg, $min_reps,
-    $required_tempo, $requires_clearance, $blocked, $note)
+  db.run(`INSERT INTO exercise_constraints (${CONSTRAINT_COLS}) VALUES (${CONSTRAINT_VALUES})
     ON CONFLICT(id) DO UPDATE SET injury_id = excluded.injury_id, exercise_id = excluded.exercise_id, movement_pattern = excluded.movement_pattern,
       max_weight_kg = excluded.max_weight_kg, min_reps = excluded.min_reps, required_tempo = excluded.required_tempo,
-      requires_clearance = excluded.requires_clearance, blocked = excluded.blocked, note = excluded.note`, { ...c });
+      requires_clearance = excluded.requires_clearance, cleared_at = COALESCE(exercise_constraints.cleared_at, excluded.cleared_at),
+      blocked = excluded.blocked, note = excluded.note`, { ...c });
 }
 
 export function insertConstraint(db: Db, c: ExerciseConstraint): void {
-  db.run(`INSERT INTO exercise_constraints (${CONSTRAINT_COLS}) VALUES ($id, $injury_id, $exercise_id, $movement_pattern, $max_weight_kg, $min_reps,
-    $required_tempo, $requires_clearance, $blocked, $note)`, { ...c });
+  db.run(`INSERT INTO exercise_constraints (${CONSTRAINT_COLS}) VALUES (${CONSTRAINT_VALUES})`, { ...c });
 }
 
 export function updateConstraint(db: Db, c: ExerciseConstraint): void {
   db.run(`UPDATE exercise_constraints SET exercise_id = $exercise_id, movement_pattern = $movement_pattern, max_weight_kg = $max_weight_kg,
-    min_reps = $min_reps, required_tempo = $required_tempo, requires_clearance = $requires_clearance, blocked = $blocked, note = $note WHERE id = $id`,
-    { ...c, injury_id: undefined });
+    min_reps = $min_reps, required_tempo = $required_tempo, requires_clearance = $requires_clearance, cleared_at = $cleared_at, blocked = $blocked,
+    note = $note WHERE id = $id`, omit({ ...c }, 'injury_id'));
 }
 
 export function deleteConstraint(db: Db, id: string): boolean {

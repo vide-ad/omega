@@ -1,6 +1,6 @@
 import type { Exercise, ExerciseMuscleCredit, MuscleGroup } from '@omega/core';
 import type { Db, Row } from '../connection.js';
-import { bool, json, num, str, strOrNull, toJson } from '../mappers.js';
+import { bool, json, num, str, strOrNull, omit } from '../mappers.js';
 
 export function rowToExercise(r: Row): Exercise {
   return {
@@ -16,6 +16,7 @@ export function rowToExercise(r: Row): Exercise {
     default_rir_target: num(r.default_rir_target),
     default_rest_seconds: num(r.default_rest_seconds),
     weight_increment_kg: num(r.weight_increment_kg),
+    uses_bodyweight: bool(r.uses_bodyweight),
     demo_video_url: strOrNull(r.demo_video_url),
     cues: strOrNull(r.cues),
     archived: bool(r.archived),
@@ -33,11 +34,17 @@ export function rowToCredit(r: Row): ExerciseMuscleCredit {
 }
 
 const EXERCISE_COL_NAMES = ['id', 'name', 'aliases', 'equipment', 'movement_pattern', 'is_unilateral', 'lengthened_bias', 'default_rep_low', 'default_rep_high',
-  'default_rir_target', 'default_rest_seconds', 'weight_increment_kg', 'demo_video_url', 'cues', 'archived', 'created_at'] as const;
+  'default_rir_target', 'default_rest_seconds', 'weight_increment_kg', 'uses_bodyweight', 'demo_video_url', 'cues', 'archived', 'created_at'] as const;
 const EXERCISE_COLS = EXERCISE_COL_NAMES.join(', ');
+const EXERCISE_VALUES = EXERCISE_COL_NAMES.map((c) => `$${c}`).join(', ');
+
 /** Column list qualified with a table alias, e.g. `e.id, e.name, ...`. */
 export function exerciseCols(alias: string): string {
   return EXERCISE_COL_NAMES.map((c) => `${alias}.${c}`).join(', ');
+}
+
+function bind(e: Exercise) {
+  return { ...e, aliases: JSON.stringify(e.aliases) };
 }
 
 export function getExercise(db: Db, id: string): Exercise | null {
@@ -50,6 +57,10 @@ export function listAllExercises(db: Db, opts: { includeArchived?: boolean } = {
   return db.all(`SELECT ${EXERCISE_COLS} FROM exercises ${where} ORDER BY name, id`).map(rowToExercise);
 }
 
+export function exercisesById(db: Db): Map<string, Exercise> {
+  return new Map(listAllExercises(db, { includeArchived: true }).map((e) => [e.id, e]));
+}
+
 export interface ExerciseListFilter {
   muscle?: string;
   pattern?: string;
@@ -60,6 +71,7 @@ export interface ExerciseListFilter {
   after?: { name: string; id: string };
 }
 
+/** Returns up to `limit + 1` rows so the caller can detect a next page. */
 export function listExercises(db: Db, f: ExerciseListFilter): Exercise[] {
   const where: string[] = [];
   const params: Record<string, string | number> = { limit: f.limit + 1 };
@@ -70,8 +82,8 @@ export function listExercises(db: Db, f: ExerciseListFilter): Exercise[] {
   if (f.pattern) { where.push('e.movement_pattern = $pattern'); params.pattern = f.pattern; }
   if (f.archived !== undefined) { where.push('e.archived = $archived'); params.archived = f.archived ? 1 : 0; }
   if (f.q) {
-    where.push('(e.name LIKE $q COLLATE NOCASE OR e.aliases LIKE $q COLLATE NOCASE)');
-    params.q = `%${f.q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
+    where.push("(e.name LIKE $q ESCAPE '\\' COLLATE NOCASE OR e.aliases LIKE $q ESCAPE '\\' COLLATE NOCASE)");
+    params.q = `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
   }
   if (f.after) {
     where.push('(e.name > $after_name OR (e.name = $after_name AND e.id > $after_id))');
@@ -85,28 +97,25 @@ export function listExercises(db: Db, f: ExerciseListFilter): Exercise[] {
 }
 
 export function insertExercise(db: Db, e: Exercise): void {
-  db.run(`INSERT INTO exercises (${EXERCISE_COLS}) VALUES ($id, $name, $aliases, $equipment, $movement_pattern, $is_unilateral, $lengthened_bias,
-    $default_rep_low, $default_rep_high, $default_rir_target, $default_rest_seconds, $weight_increment_kg, $demo_video_url, $cues, $archived, $created_at)`,
-    { ...e, aliases: JSON.stringify(e.aliases) });
+  db.run(`INSERT INTO exercises (${EXERCISE_COLS}) VALUES (${EXERCISE_VALUES})`, bind(e));
 }
 
+/** Seed upsert: library fields follow the seed; user-editable free text (video, cues) is kept when already set. */
 export function upsertExercise(db: Db, e: Exercise): void {
-  db.run(`INSERT INTO exercises (${EXERCISE_COLS}) VALUES ($id, $name, $aliases, $equipment, $movement_pattern, $is_unilateral, $lengthened_bias,
-    $default_rep_low, $default_rep_high, $default_rir_target, $default_rest_seconds, $weight_increment_kg, $demo_video_url, $cues, $archived, $created_at)
+  db.run(`INSERT INTO exercises (${EXERCISE_COLS}) VALUES (${EXERCISE_VALUES})
     ON CONFLICT(id) DO UPDATE SET name = excluded.name, aliases = excluded.aliases, equipment = excluded.equipment,
       movement_pattern = excluded.movement_pattern, is_unilateral = excluded.is_unilateral, lengthened_bias = excluded.lengthened_bias,
       default_rep_low = excluded.default_rep_low, default_rep_high = excluded.default_rep_high, default_rir_target = excluded.default_rir_target,
-      default_rest_seconds = excluded.default_rest_seconds, weight_increment_kg = excluded.weight_increment_kg,
-      demo_video_url = COALESCE(exercises.demo_video_url, excluded.demo_video_url), cues = COALESCE(exercises.cues, excluded.cues)`,
-    { ...e, aliases: JSON.stringify(e.aliases) });
+      default_rest_seconds = excluded.default_rest_seconds, weight_increment_kg = excluded.weight_increment_kg, uses_bodyweight = excluded.uses_bodyweight,
+      demo_video_url = COALESCE(exercises.demo_video_url, excluded.demo_video_url), cues = COALESCE(exercises.cues, excluded.cues)`, bind(e));
 }
 
 export function updateExercise(db: Db, e: Exercise): void {
   db.run(`UPDATE exercises SET name = $name, aliases = $aliases, equipment = $equipment, movement_pattern = $movement_pattern,
     is_unilateral = $is_unilateral, lengthened_bias = $lengthened_bias, default_rep_low = $default_rep_low, default_rep_high = $default_rep_high,
     default_rir_target = $default_rir_target, default_rest_seconds = $default_rest_seconds, weight_increment_kg = $weight_increment_kg,
-    demo_video_url = $demo_video_url, cues = $cues, archived = $archived WHERE id = $id`,
-    { ...e, aliases: JSON.stringify(e.aliases), created_at: undefined });
+    uses_bodyweight = $uses_bodyweight, demo_video_url = $demo_video_url, cues = $cues, archived = $archived WHERE id = $id`,
+    omit(bind(e), 'created_at'));
 }
 
 export function listCredits(db: Db, exerciseId?: string): ExerciseMuscleCredit[] {
@@ -149,5 +158,3 @@ export function upsertMuscleGroup(db: Db, m: MuscleGroup): void {
   db.run(`INSERT INTO muscle_groups (key, display_name, region) VALUES ($key, $display_name, $region)
     ON CONFLICT(key) DO UPDATE SET display_name = excluded.display_name, region = excluded.region`, { ...m });
 }
-
-export { toJson };

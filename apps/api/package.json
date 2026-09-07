@@ -7,11 +7,12 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node --no-warnings=ExperimentalWarning dist/server.js",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-migrations.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "seed": "tsx src/cli/seed.ts",
-    "migrate": "tsx src/cli/migrate.ts"
+    "migrate": "tsx src/cli/migrate.ts",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",

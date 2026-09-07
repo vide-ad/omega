@@ -33,7 +33,10 @@ export function rowToTemplateExercise(r: Row): TemplateExercise {
 }
 
 const TPL_COLS = 'id, name, day_label, "order", version, mesocycle_id, archived';
-const TE_COLS = 'id, template_id, template_version, exercise_id, "order", base_sets, is_priority, rep_low, rep_high, rir_target, rest_seconds, last_set_amrap, notes';
+const TE_COL_NAMES = ['id', 'template_id', 'template_version', 'exercise_id', 'order', 'base_sets', 'is_priority', 'rep_low', 'rep_high', 'rir_target', 'rest_seconds', 'last_set_amrap', 'notes'] as const;
+const TE_COLS = TE_COL_NAMES.map((c) => (c === 'order' ? '"order"' : c)).join(', ');
+const TE_VALUES = TE_COL_NAMES.map((c) => `$${c}`).join(', ');
+const teCols = (alias: string) => TE_COL_NAMES.map((c) => `${alias}.${c === 'order' ? '"order"' : c}`).join(', ');
 
 export function getTemplate(db: Db, id: string): WorkoutTemplate | null {
   const r = db.get(`SELECT ${TPL_COLS} FROM workout_templates WHERE id = $id`, { id });
@@ -54,6 +57,7 @@ export function insertTemplate(db: Db, t: WorkoutTemplate, createdAt: string): v
   snapshotVersion(db, t, createdAt);
 }
 
+/** Seed upsert: never lowers the version or un-archives; refreshes name/label/order/mesocycle. */
 export function upsertTemplate(db: Db, t: WorkoutTemplate, createdAt: string): void {
   db.run(`INSERT INTO workout_templates (${TPL_COLS}) VALUES ($id, $name, $day_label, $order, $version, $mesocycle_id, $archived)
     ON CONFLICT(id) DO UPDATE SET name = excluded.name, day_label = excluded.day_label, "order" = excluded."order",
@@ -94,23 +98,34 @@ export function listTemplateExercises(db: Db, templateId: string, version: numbe
 }
 
 export function insertTemplateExercise(db: Db, te: TemplateExercise): void {
-  db.run(`INSERT INTO template_exercises (${TE_COLS}) VALUES ($id, $template_id, $template_version, $exercise_id, $order, $base_sets, $is_priority,
-    $rep_low, $rep_high, $rir_target, $rest_seconds, $last_set_amrap, $notes)`, { ...te });
+  db.run(`INSERT INTO template_exercises (${TE_COLS}) VALUES (${TE_VALUES})`, { ...te });
 }
 
+/** Seed upsert by id; the row's version is never moved. */
 export function upsertTemplateExercise(db: Db, te: TemplateExercise): void {
-  db.run(`INSERT INTO template_exercises (${TE_COLS}) VALUES ($id, $template_id, $template_version, $exercise_id, $order, $base_sets, $is_priority,
-    $rep_low, $rep_high, $rir_target, $rest_seconds, $last_set_amrap, $notes)
+  db.run(`INSERT INTO template_exercises (${TE_COLS}) VALUES (${TE_VALUES})
     ON CONFLICT(id) DO UPDATE SET exercise_id = excluded.exercise_id, "order" = excluded."order", base_sets = excluded.base_sets,
       is_priority = excluded.is_priority, rep_low = excluded.rep_low, rep_high = excluded.rep_high, rir_target = excluded.rir_target,
       rest_seconds = excluded.rest_seconds, last_set_amrap = excluded.last_set_amrap, notes = excluded.notes`, { ...te });
 }
 
-/** Latest template row (from a non-archived template, latest version) that prescribes this exercise, if any. */
-export function latestTemplateExerciseFor(db: Db, exerciseId: string): TemplateExercise | null {
-  const r = db.get(`SELECT te.id, te.template_id, te.template_version, te.exercise_id, te."order", te.base_sets, te.is_priority, te.rep_low, te.rep_high,
-      te.rir_target, te.rest_seconds, te.last_set_amrap, te.notes
+/**
+ * The most recent template slot that contains `exerciseId`: the latest version of a template, preferring
+ * non-archived templates, then the template most recently used in a workout, then template order.
+ * `templateId` restricts the search to one template.
+ */
+export function latestTemplateExerciseFor(db: Db, exerciseId: string, templateId?: string): TemplateExercise | null {
+  const r = db.get(`SELECT ${teCols('te')}
     FROM template_exercises te JOIN workout_templates t ON t.id = te.template_id AND t.version = te.template_version
-    WHERE te.exercise_id = $id ORDER BY t.archived, t."order", te."order" LIMIT 1`, { id: exerciseId });
+    WHERE te.exercise_id = $id ${templateId ? 'AND t.id = $tid' : ''}
+    ORDER BY t.archived, (SELECT max(w.date) FROM workouts w WHERE w.template_id = t.id) DESC, t."order", te."order" LIMIT 1`,
+    templateId ? { id: exerciseId, tid: templateId } : { id: exerciseId });
+  return r ? rowToTemplateExercise(r) : null;
+}
+
+/** The slot for `exerciseId` in a specific template version (the one a workout was instantiated from). */
+export function templateExerciseInVersion(db: Db, templateId: string, version: number, exerciseId: string): TemplateExercise | null {
+  const r = db.get(`SELECT ${TE_COLS} FROM template_exercises WHERE template_id = $id AND template_version = $v AND exercise_id = $ex ORDER BY "order" LIMIT 1`,
+    { id: templateId, v: version, ex: exerciseId });
   return r ? rowToTemplateExercise(r) : null;
 }

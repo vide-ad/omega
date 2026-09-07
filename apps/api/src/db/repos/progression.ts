@@ -25,17 +25,20 @@ export function listStates(db: Db): ProgressionState[] {
   return db.all(`SELECT ${S_COLS} FROM progression_state`).map(rowToState);
 }
 
+export function statesByExercise(db: Db): Map<string, ProgressionState> {
+  return new Map(listStates(db).map((s) => [s.exercise_id, s]));
+}
+
 export function upsertState(db: Db, s: ProgressionState): void {
   db.run(`INSERT INTO progression_state (${S_COLS}) VALUES ($exercise_id, $working_weight_kg, $baseline_e1rm, $baseline_set_id, $last_progressed_at, $consecutive_stalls, $updated_at)
     ON CONFLICT(exercise_id) DO UPDATE SET working_weight_kg = excluded.working_weight_kg, baseline_e1rm = excluded.baseline_e1rm, baseline_set_id = excluded.baseline_set_id,
       last_progressed_at = excluded.last_progressed_at, consecutive_stalls = excluded.consecutive_stalls, updated_at = excluded.updated_at`, { ...s });
 }
 
-/** Seed helper: sets the working weight without touching baseline/stall data if the row exists. */
-export function upsertWorkingWeight(db: Db, exerciseId: string, workingWeightKg: number, updatedAt: string): void {
-  db.run(`INSERT INTO progression_state (${S_COLS}) VALUES ($exercise_id, $working_weight_kg, NULL, NULL, NULL, 0, $updated_at)
-    ON CONFLICT(exercise_id) DO UPDATE SET working_weight_kg = excluded.working_weight_kg, updated_at = excluded.updated_at`,
-    { exercise_id: exerciseId, working_weight_kg: workingWeightKg, updated_at: updatedAt });
+/** Seed helper: creates the starting-load row only when none exists, so re-seeding never overwrites a live working weight. */
+export function insertStartingLoadIfAbsent(db: Db, exerciseId: string, workingWeightKg: number, updatedAt: string): boolean {
+  return db.run(`INSERT INTO progression_state (${S_COLS}) VALUES ($exercise_id, $working_weight_kg, NULL, NULL, NULL, 0, $updated_at)
+    ON CONFLICT(exercise_id) DO NOTHING`, { exercise_id: exerciseId, working_weight_kg: workingWeightKg, updated_at: updatedAt }).changes > 0;
 }
 
 // --- volume targets ---------------------------------------------------------

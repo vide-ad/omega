@@ -126,6 +126,18 @@ const sender = async (op: OutboxOp): Promise<SendResult> => {
 
 let inflight: Promise<ReplayReport | null> | null = null;
 let rerun = false;
+
+/**
+ * Ops confirmed by the server in the last `RECENT_MS`. A GET that was already in flight when the
+ * op was sent can return a snapshot taken *before* the server applied it; `cachedGet` re-applies
+ * these (idempotently) over every fresh response so a just-synced set is never dropped.
+ */
+const RECENT_MS = 30_000;
+let recentlySent: Array<{ op: OutboxOp; at: number }> = [];
+export function recentlyConfirmedOps(now = Date.now()): OutboxOp[] {
+  recentlySent = recentlySent.filter((r) => now - r.at < RECENT_MS);
+  return recentlySent.map((r) => r.op);
+}
 const drainedListeners = new Set<() => void>();
 
 /** Fires after a replay run that emptied the queue (screens refetch to pick up server-computed fields). */
@@ -147,6 +159,7 @@ export function replayNow(): Promise<ReplayReport | null> {
         report = await replay(s, sender, async (op) => {
           // Bake the confirmed op into the cache once more (no-op if already applied) so a
           // concurrent network fetch that raced ahead of the replay does not drop it.
+          recentlySent.push({ op, at: Date.now() });
           emitCache(await applyOpToCache(s.cache, op));
         });
         const patch: Partial<SyncStatus> = {

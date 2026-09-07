@@ -20,7 +20,7 @@ export function fmtClock(seconds: number): string {
 /** Target line: `4 × 6–8 @ RIR 2`, or `3 × 10, 11, 11 @ RIR 1` when the engine set per-set targets. */
 export function fmtTarget(ex: WorkoutExerciseDetail): string {
   const we = ex.workout_exercise;
-  const byset = ex.prescription?.target_reps_by_set;
+  const byset = we.target_reps_by_set ?? ex.prescription?.target_reps_by_set;
   const reps = byset && byset.length > 0 ? byset.join(', ') : `${we.target_rep_low}–${we.target_rep_high}`;
   return `${we.target_sets} × ${reps} @ RIR ${we.target_rir}`;
 }

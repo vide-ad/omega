@@ -29,19 +29,23 @@ export function getReadinessByDate(db: Db, date: string): ReadinessLog | null {
   return r ? rowToReadiness(r) : null;
 }
 
+/** Logs dated in [from, to], newest first. */
 export function listReadiness(db: Db, from: string, to: string): ReadinessLog[] {
   return db.all(`SELECT ${R_COLS} FROM readiness_logs WHERE date >= $from AND date <= $to ORDER BY date DESC`, { from, to }).map(rowToReadiness);
 }
 
-/** All logs (date + resting_hr) for the rolling RHR median. */
-export function readinessHistory(db: Db): Array<Pick<ReadinessLog, 'date' | 'resting_hr'>> {
-  return db.all<{ date: string; resting_hr: number | null }>('SELECT date, resting_hr FROM readiness_logs ORDER BY date');
+/** Every log, oldest first (rolling medians). */
+export function listAllReadiness(db: Db): ReadinessLog[] {
+  return db.all(`SELECT ${R_COLS} FROM readiness_logs ORDER BY date`).map(rowToReadiness);
 }
 
-export function upsertReadiness(db: Db, r: ReadinessLog): void {
-  db.run(`INSERT INTO readiness_logs (${R_COLS}) VALUES ($id, $date, $bodyweight_kg, $resting_hr, $sleep_hours, $sleep_quality, $stress, $motivation, $manual_compromised, $notes)
-    ON CONFLICT(id) DO UPDATE SET date = excluded.date, bodyweight_kg = excluded.bodyweight_kg, resting_hr = excluded.resting_hr, sleep_hours = excluded.sleep_hours,
-      sleep_quality = excluded.sleep_quality, stress = excluded.stress, motivation = excluded.motivation, manual_compromised = excluded.manual_compromised, notes = excluded.notes`, { ...r });
+export function insertReadiness(db: Db, r: ReadinessLog): void {
+  db.run(`INSERT INTO readiness_logs (${R_COLS}) VALUES ($id, $date, $bodyweight_kg, $resting_hr, $sleep_hours, $sleep_quality, $stress, $motivation, $manual_compromised, $notes)`, { ...r });
+}
+
+export function updateReadiness(db: Db, r: ReadinessLog): void {
+  db.run(`UPDATE readiness_logs SET date = $date, bodyweight_kg = $bodyweight_kg, resting_hr = $resting_hr, sleep_hours = $sleep_hours, sleep_quality = $sleep_quality,
+    stress = $stress, motivation = $motivation, manual_compromised = $manual_compromised, notes = $notes WHERE id = $id`, { ...r });
 }
 
 export function listSoreness(db: Db, readinessId: string): SorenessEntry[] {
@@ -49,10 +53,18 @@ export function listSoreness(db: Db, readinessId: string): SorenessEntry[] {
     .map((r) => ({ readiness_id: str(r.readiness_id), muscle_group_key: str(r.muscle_group_key) as SorenessEntry['muscle_group_key'], rating: num(r.rating) }));
 }
 
+/** Soreness entries of the readiness log dated `date` (empty when no log). */
+export function listSorenessByDate(db: Db, date: string): SorenessEntry[] {
+  return db.all(`SELECT s.readiness_id, s.muscle_group_key, s.rating FROM soreness_entries s JOIN readiness_logs r ON r.id = s.readiness_id
+    WHERE r.date = $date ORDER BY s.muscle_group_key`, { date })
+    .map((r) => ({ readiness_id: str(r.readiness_id), muscle_group_key: str(r.muscle_group_key) as SorenessEntry['muscle_group_key'], rating: num(r.rating) }));
+}
+
 export function replaceSoreness(db: Db, readinessId: string, entries: ReadonlyArray<Pick<SorenessEntry, 'muscle_group_key' | 'rating'>>): void {
   db.run('DELETE FROM soreness_entries WHERE readiness_id = $id', { id: readinessId });
   for (const e of entries) {
-    db.run('INSERT INTO soreness_entries (readiness_id, muscle_group_key, rating) VALUES ($readiness_id, $muscle_group_key, $rating)',
+    db.run(`INSERT INTO soreness_entries (readiness_id, muscle_group_key, rating) VALUES ($readiness_id, $muscle_group_key, $rating)
+      ON CONFLICT(readiness_id, muscle_group_key) DO UPDATE SET rating = excluded.rating`,
       { readiness_id: readinessId, muscle_group_key: e.muscle_group_key, rating: e.rating });
   }
 }

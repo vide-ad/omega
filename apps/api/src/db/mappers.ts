@@ -1,3 +1,4 @@
+import type { Params } from './connection.js';
 /** Row ↔ domain conversions shared by the repositories. */
 
 export function bool(v: unknown): boolean {
@@ -41,4 +42,14 @@ export function jsonOrNull<T>(v: unknown): T | null {
 
 export function toJson(v: unknown): string | null {
   return v === null || v === undefined ? null : JSON.stringify(v);
+}
+
+/**
+ * Drop keys from a bind object. `{ ...row, key: undefined }` keeps the key, and node:sqlite
+ * rejects named parameters that do not appear in the statement ("Unknown named parameter").
+ */
+export function omit<T extends Params>(obj: T, ...keys: string[]): Params {
+  const out: Params = { ...obj };
+  for (const k of keys) delete out[k];
+  return out;
 }
