@@ -1,0 +1,7 @@
+[Unit]
+Description=Nightly SQLite backup for Omega
+
+[Service]
+Type=oneshot
+User=omega
+ExecStart=/bin/sh -c 'mkdir -p /var/backups/omega && sqlite3 /var/lib/omega/omega.db ".backup /var/backups/omega/omega-$(date +%%F).db" && find /var/backups/omega -name "omega-*.db" -mtime +30 -delete'

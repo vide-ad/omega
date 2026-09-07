@@ -1,0 +1,7 @@
+# Replace omega.example.com with your hostname (a bought domain or a DuckDNS subdomain).
+# Caddy provisions and renews the TLS certificate automatically. iOS installed PWAs require HTTPS.
+omega.example.com {
+	encode zstd gzip
+	# Everything (API + PWA) is served by the Node process; Caddy only terminates TLS.
+	reverse_proxy 127.0.0.1:8787
+}

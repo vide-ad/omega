@@ -1,0 +1,19 @@
+[Unit]
+Description=Omega training API + PWA host
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=omega
+WorkingDirectory=/srv/omega/apps/api
+EnvironmentFile=/etc/omega/env
+ExecStart=/usr/bin/node --no-warnings=ExperimentalWarning dist/server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/omega
+
+[Install]
+WantedBy=multi-user.target
