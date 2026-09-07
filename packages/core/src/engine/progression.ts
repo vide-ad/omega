@@ -215,7 +215,12 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
   const analyses = input.history
     .map((r) => analyzeSession(r, exercise.is_unilateral, today))
     .filter((a) => a.units.length > 0)
-    .sort((a, b) => b.record.workout.date.localeCompare(a.record.workout.date));
+    // Newest first. Same-date sessions are ordered by completion time then id so M and L never
+    // depend on the order the caller happened to pass history in.
+    .sort((a, b) =>
+      b.record.workout.date.localeCompare(a.record.workout.date)
+      || (b.record.workout.completed_at ?? '').localeCompare(a.record.workout.completed_at ?? '')
+      || b.record.workout.id.localeCompare(a.record.workout.id));
   const done = analyses.filter((a) => a.done);
   const qualifying = done.filter((a) => a.qualifying);
   const M = done[0] ?? null;
@@ -260,10 +265,10 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
     const fallback = M?.weight_kg ?? null;
     if (input.starting_load_kg !== null) {
       suggested = incr > 0 ? roundToIncrement(input.starting_load_kg, incr) : input.starting_load_kg;
-      rationale = `No qualifying history yet. Starting load ${fmtKg(suggested)} from the stored starting load.`;
+      rationale = 'No qualifying history yet. Starting load {{W}} from the stored starting load.';
     } else if (fallback !== null) {
       suggested = fallback;
-      rationale = `No qualifying history yet. Repeating the ${fmtKg(fallback)} used on ${M!.record.workout.date}.`;
+      rationale = `No qualifying history yet. Repeating the {{W}} used on ${M!.record.workout.date}.`;
     } else {
       rationale = 'No qualifying history yet — set a starting load.';
     }
@@ -272,7 +277,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
     // --- C2
     reason = 'deload';
     suggested = L.weight_kg;
-    rationale = `Deload week ${week.week_number}: repeating the last working weight ${fmtKg(suggested)} at reduced volume (${target_sets} sets), RIR ${target_rir}. No progression evaluated.`;
+    rationale = `Deload week ${week.week_number}: repeating the last working weight {{W}} at reduced volume (${target_sets} sets), RIR ${target_rir}. No progression evaluated.`;
   } else {
     const wL = L.weight_kg ?? 0;
     const rirOk = L.mean_rir === null || L.mean_rir >= L.record.workout_exercise.target_rir;
@@ -283,12 +288,13 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
         suggested = Math.round((wL + incr) * 1000) / 1000;
         progressedToday = true;
         stalls = 0;
-        rationale = `${describe(L)} Every set reached the top of the range with effort in hand → +${incr} kg to ${fmtKg(suggested)}, reset to ${template.rep_low} reps.${rangeNote(L)}`;
+        rationale = `${describe(L)} Every set reached the top of the range with effort in hand → +${incr} kg to {{W}}, reset to ${template.rep_low} reps.${rangeNote(L)}`;
       } else {
         reason = 'progress_reps';
         suggested = wL;
         byset = L.reps.map((r) => r + 1);
         while (byset.length < target_sets) byset.push(template.rep_low);
+        byset = byset.slice(0, target_sets);   // L may have run more sets than today prescribes
         rep_high = Math.max(rep_high, ...byset);
         flags.push('unloadable');
         rationale = `${describe(L)} Every set reached the top of the range but this exercise has no load increment → add a rep per set (${fmtReps(byset)}).`;
@@ -297,7 +303,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
       // --- C4
       reason = 'consolidate';
       suggested = wL;
-      rationale = `${describe(L)} Reps are there but mean RIR ${fmtRir(L.mean_rir)} is under the target ${L.record.workout_exercise.target_rir} → hold ${fmtKg(suggested)} and the same reps until effort drops.${rangeNote(L)}`;
+      rationale = `${describe(L)} Reps are there but mean RIR ${fmtRir(L.mean_rir)} is under the target ${L.record.workout_exercise.target_rir} → hold {{W}} and the same reps until effort drops.${rangeNote(L)}`;
     } else if (L.any_below_low && L2 && L2.any_below_low) {
       // --- C5
       reason = 'regress_load';
@@ -305,7 +311,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
       if (w >= wL && incr > 0) w = roundToIncrement(wL - incr, incr);
       suggested = Math.max(0, w);
       stalls = prevStalls + 1;
-      rationale = `${describe(L)} Sets fell below the bottom of the range in two consecutive qualifying sessions (${L2.record.workout.date}: ${fmtReps(L2.reps)}) → reduce ~10% to ${fmtKg(suggested)} and rebuild from ${template.rep_low} reps. Stall count ${stalls}.`;
+      rationale = `${describe(L)} Sets fell below the bottom of the range in two consecutive qualifying sessions (${L2.record.workout.date}: ${fmtReps(L2.reps)}) → reduce ~10% to {{W}} and rebuild from ${template.rep_low} reps.`;
       if (suggested === 0 && wL === 0) rationale += ' Already at bodyweight.';
     } else {
       // --- C6
@@ -313,7 +319,8 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
       suggested = wL;
       byset = L.reps.map((r) => Math.min(r + 1, template.rep_high));
       while (byset.length < target_sets) byset.push(template.rep_low);
-      rationale = `${describe(L)} Not every set reached the top of the range → hold ${fmtKg(suggested)} and target one more rep per set (${fmtReps(byset)}).${rangeNote(L)}`;
+      byset = byset.slice(0, target_sets);     // L may have run more sets than today prescribes
+      rationale = `${describe(L)} Not every set reached the top of the range → hold {{W}} and target one more rep per set (${fmtReps(byset)}).${rangeNote(L)}`;
       if (L.any_below_low) rationale += ` A set fell below ${L.record.workout_exercise.target_rep_low}; a second consecutive miss will trigger a load reduction.`;
     }
     // --- C7
@@ -335,7 +342,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
       suggested = capped;
     } else if (suggested === null && env.max_weight_kg !== null && reason === 'first_time') {
       suggested = incr > 0 ? floorToIncrement(env.max_weight_kg, incr) : env.max_weight_kg;
-      changes.push(`starting at the ${env.max_weight_kg} kg cap`);
+      changes.push(`starting at the ${suggested} kg cap`);
     }
     if (env.min_reps !== null) {
       if (rep_low < env.min_reps) { changes.push(`minimum ${env.min_reps} reps`); rep_low = env.min_reps; }
@@ -348,10 +355,13 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
   }
 
   // --- E
+  if (reason === 'regress_load') rationale += ` Stall count ${stalls}.`;
   if (stalls >= STALL_REVIEW_THRESHOLD) {
     flags.push('stall_review');
     rationale += ` ${stalls} consecutive stalls — review this exercise (substitution or volume).`;
   }
+
+  rationale = rationale.split('{{W}}').join(fmtKg(suggested));
 
   const prescription: Prescription = {
     exercise_id: exercise.id,

@@ -464,6 +464,54 @@ describe('progression §5.5', () => {
     expect(r.prescription.reason).toBe('progress_load');
   });
 
+  it('per-set targets never exceed the sets prescribed today', () => {
+    // Last time the user ran 6 sets; today's template prescribes 3.
+    const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, [10, 9, 8, 8, 8, 8])] });
+    expect(r.prescription.target_sets).toBe(3);
+    expect(r.prescription.target_reps_by_set).toEqual([10, 10, 9]);
+    const unloadable = prescribe({ ...base, exercise: { ...exercise, weight_increment_kg: 0 }, history: [session('2026-09-12', 0, [10, 10, 10, 10, 15])] });
+    expect(unloadable.prescription.target_reps_by_set).toEqual([11, 11, 11]);
+    expect(unloadable.prescription.target_rep_high).toBe(11); // not widened by the dropped 16
+  });
+
+  it('the rationale always names the weight actually prescribed', () => {
+    const cs = [c({ movement_pattern: 'elbow_flexion', max_weight_kg: 5, note: 'Rehab phase.' })];
+    const curl = { ...exercise, id: 'curl', weight_increment_kg: 2 };
+    const first = prescribe({ ...base, exercise: curl, constraints: cs, history: [] });
+    expect(first.prescription.suggested_weight_kg).toBe(4);
+    expect(first.prescription.rationale).toContain('starting at the 4 kg cap');
+    expect(first.prescription.rationale).not.toContain('5 kg cap');
+    // A hold that gets clamped must not tell the user to hold the pre-clamp weight.
+    const held = prescribe({ ...base, exercise: curl, constraints: cs, history: [session('2026-09-12', 6, [10, 10, 10], { rir: [0, 0, 0] })] });
+    expect(held.prescription.reason).toBe('consolidate');
+    expect(held.prescription.suggested_weight_kg).toBe(4);
+    expect(held.prescription.rationale).toContain('hold 4 kg');
+  });
+
+  it('repeat_after_compromised does not carry a stale stall count', () => {
+    const hist = [
+      session('2026-09-08', 60, [8, 7, 6], { reason: 'progress_reps' }),
+      session('2026-09-12', 60, [8, 6, 6], { reason: 'progress_reps' }),
+      session('2026-09-15', 55, [8, 8, 8], { compromised: true }),
+    ];
+    const r = prescribe({ ...base, history: hist });
+    expect(r.prescription.reason).toBe('repeat_after_compromised');
+    expect(r.next_state.consecutive_stalls).toBe(0);
+    expect(r.prescription.rationale).not.toContain('Stall count');
+    const direct = prescribe({ ...base, history: hist.slice(0, 2) });
+    expect(direct.prescription.reason).toBe('regress_load');
+    expect(direct.prescription.rationale).toContain('Stall count 1');
+  });
+
+  it('same-date sessions resolve deterministically regardless of input order', () => {
+    const good = { ...session('2026-09-12', 42.5, [10, 10, 10]), workout: { id: 'w-a', date: '2026-09-12', is_compromised: false, completed_at: '2026-09-12T09:00:00.000Z' } };
+    const bad = { ...session('2026-09-12', 45, [6, 5, 5], { compromised: true }), workout: { id: 'w-b', date: '2026-09-12', is_compromised: true, completed_at: '2026-09-12T18:00:00.000Z' } };
+    const forward = prescribe({ ...base, history: [good, bad] });
+    const reversed = prescribe({ ...base, history: [bad, good] });
+    expect(forward.prescription.reason).toBe('repeat_after_compromised'); // the later session is the compromised one
+    expect(reversed.prescription).toEqual(forward.prescription);
+  });
+
   it('rounding helpers', () => {
     expect(roundToIncrement(54, 2.5)).toBe(55);
     expect(roundToIncrement(53.7, 2.5)).toBe(52.5);

@@ -70,6 +70,9 @@ E  stall_review flag when consecutive_stalls ≥ 3
 `progress_load`. `ProgressionState` is a cache written from `next_state`, never an input.
 
 Every prescription carries `reason`, `rationale`, `flags`, `constraint_notes`, `based_on_workout_id` and `omit`.
+The rationale always names the weight actually prescribed (the clamp is applied before the text is finalised) and
+explains what the clamp changed; `target_reps_by_set` is always exactly `target_sets` long. History is ordered by
+date, then completion time, then id, so two sessions on the same date resolve deterministically.
 
 ## Known deliberate deviations from the spec text
 
