@@ -2,7 +2,7 @@
 
 Agent names for the channel (`BRIDGE_NAME`), matching the `#project-north` convention of one lowercase word:
 `tempo` (PM), and for the three worker lanes pick names when the agents are started — suggested `pacer` (web/Mac),
-`anvil` (api/PC back-end) and `metronome` (core/PC coder). Post as `[name]`; see `docs/ORCHESTRATION.md`.
+`anvil` (api/PC back-end) and `metronome` (core/PC coder). Post as `[name]`; see `docs/ORCHESTRATION.md`. Channel: `#project-omega`, `SLACK_BRIDGE_CHANNEL=C0C03JVQWSJ`.
 
 | Lane | Machine | Owns (write access) | Never touches |
 |---|---|---|---|

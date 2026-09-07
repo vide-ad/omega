@@ -21,7 +21,7 @@ normal Slack app, including from his phone.
 | | |
 |---|---|
 | `BRIDGE_NAME` | your agent name — your label on the channel |
-| `SLACK_BRIDGE_CHANNEL` | the channel id (`bridge.py create <name>` makes one and prints the id) |
+| `SLACK_BRIDGE_CHANNEL` | the channel id (`bridge.py create <name>` makes one and prints the id) — **Omega is `C0C03JVQWSJ` (`#project-omega`)** |
 | `SLACK_BOT_TOKEN` | already a user environment variable on the PC. **Never print or post it.** |
 
 ```
@@ -37,7 +37,8 @@ python D:\Coding\bridge.py pin                   # maintain one pinned running-s
 itself, so **the `[name]` prefix in the text is what identifies the sender** — it is not decoration.
 
 A new channel needs `@agentbridge` invited to it if `create` does not do so already; the bot only sees channels
-it has been invited to.
+it has been invited to. **`#project-omega` was created through the Claude connector, not `bridge.py create`, so
+the bot is not a member yet — David must invite it before the bridge.py lanes can post.**
 
 ## How each Omega agent reaches the channel
 
