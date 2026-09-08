@@ -172,11 +172,6 @@ export function roundToIncrement(weight: number, increment: number): number {
   return Math.round(roundHalfUp(weight / increment) * increment * 1000) / 1000;
 }
 
-export function floorToIncrement(weight: number, increment: number): number {
-  if (increment <= 0) return Math.round(weight * 100) / 100;
-  return Math.round(Math.floor(weight / increment + 1e-9) * increment * 1000) / 1000;
-}
-
 function fmtReps(reps: readonly number[]): string { return reps.join(', '); }
 function fmtKg(w: number | null): string { return w === null ? 'no weight set' : `${w} kg`; }
 function fmtRir(r: number | null): string { return r === null ? '—' : (Math.round(r * 10) / 10).toString(); }
@@ -211,7 +206,10 @@ export function derivedStalls(doneNewestFirst: readonly SessionAnalysis[]): numb
 
 // ---------------------------------------------------------------------------
 // The decision procedure (spec §5.5 as resolved by the audit):
-//   A  eligibility: blocked → omit; uncleared requires_clearance → no weight, stays in session
+//   A  eligibility, and a constraint stops the engine here (A4):
+//        A1 blocked: omit from the session
+//        A2 uncleared requires_clearance: no weight, stays in session
+//        A3 any other active constraint: reason constrained, no weight, stays in session
 //   B  structure: ramped sets, RIR clamped into the week's range, AMRAP off on deload
 //   C  load decision, first match wins:
 //        C1 no L → first_time (starting load if any)
@@ -221,7 +219,7 @@ export function derivedStalls(doneNewestFirst: readonly SessionAnalysis[]): numb
 //        C5 any < L.rep_low in L AND in L' → regress_load (−10%, stalls+1)
 //        C6 otherwise → progress_reps (+1 per unit, capped at T.rep_high)
 //        C7 M ≠ L (most recent done session non-qualifying) → relabel repeat_after_compromised, stalls untouched
-//   D  constraint clamp: min(weight, cap) floored to increment; reps ≥ min_reps; tempo; notes; flag constrained
+//   D  constraint display for A2 and A3: rep floor, tempo, notes, flag constrained. No weight is computed
 //   E  stall_review when stalls ≥ 3
 // L = most recent qualifying done session; L' = the qualifying one before it; M = most recent done session.
 // Performance is judged against L's OWN stored targets; the output uses the current template + week.
@@ -284,6 +282,18 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
     // --- A2
     reason = 'requires_clearance';
     rationale = 'Held pending physio clearance. No load is prescribed until the constraint is cleared, and sets may still be logged.';
+  } else if (input.constraints.length > 0) {
+    // --- A3 (amendment A4). David's ruling: "If injured let the user figure it out no recommendation
+    // required." A constraint stops the engine before it computes anything, rather than letting it work
+    // out a weight and then cap it. Stage B has already run, so the set count and target effort still
+    // apply. Stages C and D are skipped and David sets the weight himself.
+    reason = 'constrained';
+    const limits: string[] = [];
+    if (env.max_weight_kg !== null) limits.push(`no more than ${env.max_weight_kg} kg`);
+    if (env.min_reps !== null) limits.push(`at least ${env.min_reps} reps`);
+    if (env.required_tempo) limits.push(`tempo ${env.required_tempo}`);
+    rationale = 'An injury constraint applies here, so I am not suggesting a weight. You pick it.';
+    if (limits.length) rationale += ` Your limits are ${limits.join(', ')}.`;
   } else if (!L) {
     // --- C1
     reason = 'first_time';
@@ -369,26 +379,17 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
     }
   }
 
-  // --- D: constraint clamp
+  // --- D: constraint display, for A2 and A3 only. The engine no longer computes a weight for a
+  // constrained exercise, so there is nothing to clamp. The rep floor, the tempo and the physio note
+  // are carried through as information about the limit, not as a prescription.
   let target_tempo: string | null = null;
-  if (input.constraints.length > 0 && !env.blocked && !env.awaiting_clearance) {
-    const changes: string[] = [];
-    if (suggested !== null && env.max_weight_kg !== null && suggested > env.max_weight_kg) {
-      const capped = incr > 0 ? floorToIncrement(env.max_weight_kg, incr) : env.max_weight_kg;
-      changes.push(`load capped at ${capped} kg (rule gave ${suggested} kg)`);
-      suggested = capped;
-    } else if (suggested === null && env.max_weight_kg !== null && reason === 'first_time') {
-      suggested = incr > 0 ? floorToIncrement(env.max_weight_kg, incr) : env.max_weight_kg;
-      changes.push(`starting at the ${suggested} kg cap`);
-    }
+  if (input.constraints.length > 0 && !env.blocked) {
     if (env.min_reps !== null) {
-      if (rep_low < env.min_reps) { changes.push(`minimum ${env.min_reps} reps`); rep_low = env.min_reps; }
+      if (rep_low < env.min_reps) rep_low = env.min_reps;
       if (rep_high < rep_low) rep_high = rep_low;
-      if (byset) byset = byset.map((r) => Math.max(r, env.min_reps as number));
     }
-    if (env.required_tempo) { target_tempo = env.required_tempo; changes.push(`tempo ${env.required_tempo}`); }
+    if (env.required_tempo) target_tempo = env.required_tempo;
     flags.push('constrained');
-    rationale += ` Injury constraint applies${changes.length ? `: ${changes.join(', ')}` : ''}.`;
   }
 
   // --- E

@@ -319,6 +319,7 @@ export interface ProgressionState {
 export type PrescriptionReason =
   | 'first_time'                // no qualifying history; suggested = starting load if one exists
   | 'requires_clearance'        // uncleared clearance-gated constraint; stays in session, no weight
+  | 'constrained'               // an active constraint applies; the engine prescribes no weight (A4)
   | 'blocked'                   // constraint excludes the exercise; API omits it from the session
   | 'deload'
   | 'progress_load'
@@ -328,13 +329,13 @@ export type PrescriptionReason =
   | 'repeat_after_compromised';
 
 export const PRESCRIPTION_REASONS: readonly PrescriptionReason[] = [
-  'first_time', 'requires_clearance', 'blocked', 'deload', 'progress_load', 'consolidate',
+  'first_time', 'requires_clearance', 'constrained', 'blocked', 'deload', 'progress_load', 'consolidate',
   'progress_reps', 'regress_load', 'repeat_after_compromised',
 ];
 
 export type PrescriptionFlag =
   | 'stall_review'        // consecutive_stalls >= 3, surface to coach
-  | 'constrained'         // an active ExerciseConstraint applies (cap / min reps / tempo); notes attached
+  | 'constrained'         // an active ExerciseConstraint applies (cap, min reps, tempo); notes attached
   | 'unloadable';         // weight_increment_kg is 0, so load cannot progress; reps do instead
 
 export interface Prescription {

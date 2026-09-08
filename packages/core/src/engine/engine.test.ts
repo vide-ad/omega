@@ -6,7 +6,7 @@ import { clampTargetRir, mesocycleWeekNumber, rampedTargetSets, weekWindowFor } 
 import { activeConstraintsFor, foldConstraints } from './constraints.js';
 import { exerciseCompromisedReasons, musclesTrained, rollingMedianRhr, workoutCompromisedReasons } from './compromised.js';
 import { effectiveHardSets, isHardSet, weeklyVolume } from './volume.js';
-import { derivedStalls, floorToIncrement, prescribe, roundToIncrement, toWorkUnits, type ExerciseSessionRecord } from './progression.js';
+import { derivedStalls, prescribe, roundToIncrement, toWorkUnits, type ExerciseSessionRecord } from './progression.js';
 
 describe('e1rm', () => {
   it('matches spec formula', () => {
@@ -510,25 +510,74 @@ describe('progression §5.5', () => {
     expect(r.prescription.target_reps_by_set).toEqual([10, 10, 8]);
   });
 
-  it('constrained exercises progress normally but are clamped (cap floored to increment, min reps, tempo, notes)', () => {
+  // --- Constraints stop the engine (docs/ENGINE-RULES.md stage A3, amendment A4) -----------------
+  // David's ruling on 8 September 2026: "If injured let the user figure it out no recommendation
+  // required." The engine used to work out a weight and clamp it to the cap. It now declines to
+  // suggest one at all, and shows the limit as information instead.
+  describe('a constraint stops the engine (A4)', () => {
     const cs = [c({ movement_pattern: 'elbow_flexion', max_weight_kg: 5, min_reps: 15, required_tempo: '3-0-3-0', note: 'Rehab phase.' })];
     const curl = { ...exercise, id: 'curl', weight_increment_kg: 2 };
-    const first = prescribe({ ...base, exercise: curl, template: { ...template, rep_low: 10, rep_high: 12 }, constraints: cs, history: [], starting_load_kg: null });
-    expect(first.prescription.reason).toBe('first_time');
-    expect(first.prescription.suggested_weight_kg).toBe(4); // starts at the cap, floored to the 2 kg grid
-    expect(first.prescription.target_rep_low).toBe(15);
-    expect(first.prescription.target_rep_high).toBe(15);
-    expect(first.prescription.target_tempo).toBe('3-0-3-0');
-    expect(first.prescription.flags).toContain('constrained');
-    expect(first.prescription.constraint_notes).toEqual(['Rehab phase.']);
-    // Hit 15s at RIR 2 on 4 kg → rule says +2 = 6 kg, clamp holds it at 4 kg and says so.
-    const next = prescribe({ ...base, exercise: curl, template: { ...template, rep_low: 10, rep_high: 12 }, constraints: cs, history: [session('2026-09-12', 4, [15, 15, 15], { range: [15, 15] })] });
-    expect(next.prescription.reason).toBe('progress_load');
-    expect(next.prescription.suggested_weight_kg).toBe(4);
-    expect(next.prescription.rationale).toContain('capped');
-    // Raise the cap to 6 → the same history now progresses to 6.
-    const raised = prescribe({ ...base, exercise: curl, template: { ...template, rep_low: 10, rep_high: 12 }, constraints: [c({ ...cs[0]!, max_weight_kg: 6 })], history: [session('2026-09-12', 4, [15, 15, 15], { range: [15, 15] })] });
-    expect(raised.prescription.suggested_weight_kg).toBe(6);
+    const curlBase = { ...base, exercise: curl, template: { ...template, rep_low: 10, rep_high: 12 }, constraints: cs };
+
+    it('prescribes no weight, and shows the cap, rep floor, tempo and physio note instead', () => {
+      const first = prescribe({ ...curlBase, history: [], starting_load_kg: null });
+      expect(first.prescription.reason).toBe('constrained');
+      expect(first.prescription.suggested_weight_kg).toBeNull();
+      expect(first.prescription.target_rep_low).toBe(15);
+      expect(first.prescription.target_rep_high).toBe(15);
+      expect(first.prescription.target_tempo).toBe('3-0-3-0');
+      expect(first.prescription.flags).toContain('constrained');
+      expect(first.prescription.constraint_notes).toEqual(['Rehab phase.']);
+      expect(first.prescription.omit).toBe(false);
+      // The cap is the one limit with no field of its own, so it has to be in the words David reads.
+      expect(first.prescription.rationale).toContain('no more than 5 kg');
+      expect(first.prescription.rationale).toContain('at least 15 reps');
+      expect(first.prescription.rationale).toContain('3-0-3-0');
+    });
+
+    it('a starting load does not reopen the decision', () => {
+      const r = prescribe({ ...curlBase, history: [], starting_load_kg: 4 });
+      expect(r.prescription.reason).toBe('constrained');
+      expect(r.prescription.suggested_weight_kg).toBeNull();
+    });
+
+    it('history that would have progressed still gets no weight', () => {
+      // Three sets of 15 at RIR 2 on 4 kg. The old engine said +2 kg and clamped it back to 4.
+      const r = prescribe({ ...curlBase, history: [session('2026-09-12', 4, [15, 15, 15], { range: [15, 15] })] });
+      expect(r.prescription.reason).toBe('constrained');
+      expect(r.prescription.suggested_weight_kg).toBeNull();
+      // Stage B still ran, so the set count and target effort are still prescribed.
+      expect(r.prescription.target_sets).toBe(3);
+      expect(r.prescription.target_rir).toBe(2);
+    });
+
+    it('raising the cap does not make the engine prescribe again', () => {
+      const raised = prescribe({ ...curlBase, constraints: [c({ ...cs[0]!, max_weight_kg: 6 })], history: [session('2026-09-12', 4, [15, 15, 15], { range: [15, 15] })] });
+      expect(raised.prescription.reason).toBe('constrained');
+      expect(raised.prescription.suggested_weight_kg).toBeNull();
+      expect(raised.prescription.rationale).toContain('no more than 6 kg');
+    });
+
+    it('a note-only constraint still stops the engine and says so plainly', () => {
+      const r = prescribe({ ...base, constraints: [c({ movement_pattern: 'squat', exercise_id: 'bench', note: 'Seated only.' })], history: [session('2026-09-12', 42.5, [10, 10, 10])] });
+      expect(r.prescription.reason).toBe('constrained');
+      expect(r.prescription.suggested_weight_kg).toBeNull();
+      expect(r.prescription.constraint_notes).toEqual(['Seated only.']);
+      expect(r.prescription.rationale).not.toContain('Your limits are');
+    });
+
+    it('a deload week does not override the constraint', () => {
+      const r = prescribe({ ...curlBase, week: week({ week_number: 6, is_deload: true, volume_multiplier: 0.5, rir_target_low: 4, rir_target_high: 5 }), history: [session('2026-09-12', 4, [15, 15, 15], { range: [15, 15] })] });
+      expect(r.prescription.reason).toBe('constrained');
+      expect(r.prescription.suggested_weight_kg).toBeNull();
+    });
+
+    it('an exercise with no constraint is untouched', () => {
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, [10, 10, 10])] });
+      expect(r.prescription.reason).toBe('progress_load');
+      expect(r.prescription.suggested_weight_kg).toBe(45);
+      expect(r.prescription.flags).not.toContain('constrained');
+    });
   });
 
   it('requires_clearance → stays in session with no weight; cleared → caps still apply', () => {
@@ -538,9 +587,11 @@ describe('progression §5.5', () => {
     expect(r.prescription.suggested_weight_kg).toBeNull();
     expect(r.prescription.omit).toBe(false);
     expect(r.prescription.constraint_notes).toEqual(['Confirm with physio.']);
+    // Clearing the constraint does not remove it. It is still an active constraint, so under A4 the
+    // engine still declines to prescribe rather than capping 12.5 kg back to 10 kg as it used to.
     const cleared = prescribe({ ...base, constraints: [c({ ...cs[0]!, cleared_at: '2026-09-18T00:00:00.000Z' })], history: [session('2026-09-12', 10, [10, 10, 10])] });
-    expect(cleared.prescription.reason).toBe('progress_load');
-    expect(cleared.prescription.suggested_weight_kg).toBe(10); // 12.5 capped to 10
+    expect(cleared.prescription.reason).toBe('constrained');
+    expect(cleared.prescription.suggested_weight_kg).toBeNull();
     expect(cleared.prescription.flags).toContain('constrained');
   });
 
@@ -579,18 +630,25 @@ describe('progression §5.5', () => {
     expect(unloadable.prescription.target_rep_high).toBe(11); // not widened by the dropped 16
   });
 
-  it('the rationale always names the weight actually prescribed', () => {
+  it('the rationale always names the weight actually prescribed, and never a weight it did not', () => {
+    const cases = [
+      prescribe({ ...base, history: [session('2026-09-12', 42.5, [10, 10, 10])] }),                        // progress_load
+      prescribe({ ...base, history: [session('2026-09-12', 42.5, [10, 10, 10], { rir: [0, 0, 0] })] }),    // consolidate
+      prescribe({ ...base, history: [session('2026-09-12', 42.5, [10, 9, 8])] }),                          // progress_reps
+      prescribe({ ...base, history: [session('2026-09-12', 60, [8, 7, 6]), session('2026-09-15', 60, [8, 6, 6])] }), // regress_load
+    ];
+    for (const { prescription } of cases) {
+      expect(prescription.rationale).not.toContain('{{W}}');
+      expect(prescription.rationale).toContain(`${prescription.suggested_weight_kg} kg`);
+    }
+    // A constrained exercise names the limit, never a prescription, since the engine does not make one.
     const cs = [c({ movement_pattern: 'elbow_flexion', max_weight_kg: 5, note: 'Rehab phase.' })];
     const curl = { ...exercise, id: 'curl', weight_increment_kg: 2 };
-    const first = prescribe({ ...base, exercise: curl, constraints: cs, history: [] });
-    expect(first.prescription.suggested_weight_kg).toBe(4);
-    expect(first.prescription.rationale).toContain('starting at the 4 kg cap');
-    expect(first.prescription.rationale).not.toContain('5 kg cap');
-    // A hold that gets clamped must not tell the user to hold the pre-clamp weight.
     const held = prescribe({ ...base, exercise: curl, constraints: cs, history: [session('2026-09-12', 6, [10, 10, 10], { rir: [0, 0, 0] })] });
-    expect(held.prescription.reason).toBe('consolidate');
-    expect(held.prescription.suggested_weight_kg).toBe(4);
-    expect(held.prescription.rationale).toContain('hold 4 kg');
+    expect(held.prescription.suggested_weight_kg).toBeNull();
+    expect(held.prescription.rationale).not.toContain('{{W}}');
+    expect(held.prescription.rationale).not.toContain('hold');
+    expect(held.prescription.rationale).toContain('no more than 5 kg');
   });
 
   it('repeat_after_compromised does not carry a stale stall count', () => {
@@ -622,8 +680,5 @@ describe('progression §5.5', () => {
     expect(roundToIncrement(53.7, 2.5)).toBe(52.5);
     expect(roundToIncrement(13.5, 1)).toBe(14);
     expect(roundToIncrement(13.333, 0)).toBe(13.33);
-    expect(floorToIncrement(5, 2)).toBe(4);
-    expect(floorToIncrement(5, 2.5)).toBe(5);
-    expect(floorToIncrement(4.99, 2.5)).toBe(2.5);
   });
 });
