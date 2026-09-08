@@ -5,15 +5,17 @@ import { canRemoveLastRow, defaultDraft, draftFromSet, loggedSet, rowId, rowsFor
 import { Collapsible, Pill } from './ui.js';
 import { LoggedSetRow, SetRow } from './SetRow.js';
 
+// House style applies to anything David reads, so no arrows and no em dashes here.
 const REASON_LABEL: Record<Prescription['reason'], string> = {
-  first_time: 'first time — set a starting load',
+  first_time: 'first time, set a starting load',
   requires_clearance: 'needs physio clearance',
+  constrained: 'physio limit, you set the weight',
   blocked: 'blocked',
   deload: 'deload',
-  progress_load: 'load ↑',
+  progress_load: 'add load',
   consolidate: 'consolidate',
-  progress_reps: 'reps ↑',
-  regress_load: 'load ↓',
+  progress_reps: 'add reps',
+  regress_load: 'drop load',
   repeat_after_compromised: 'repeat (last session compromised)',
 };
 

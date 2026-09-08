@@ -189,12 +189,16 @@ describe('Day 1 → sets → completion → volume → week 2', () => {
     expect(chin.workout_exercise.suggested_weight_kg).toBeNull();
     expect(chin.workout_exercise.constraint_notes).toHaveLength(1);
 
+    // Amendment A4: a constraint stops the engine, so the curl gets no weight. It stays in the
+    // session and shows the physio's rep floor, tempo and note as information. David sets the weight.
     const curl = byName(day1, EX.INCLINE_DB_CURL);
-    expect(curl.workout_exercise.reason).toBe('first_time');
+    expect(curl.workout_exercise.reason).toBe('constrained');
     expect(curl.workout_exercise.flags).toContain('constrained');
-    expect(curl.workout_exercise.suggested_weight_kg).toBe(5);
+    expect(curl.workout_exercise.suggested_weight_kg).toBeNull();
     expect(curl.workout_exercise.target_rep_low).toBe(15);
     expect(curl.workout_exercise.target_tempo).toBe('3-0-3-0');
+    expect(curl.workout_exercise.constraint_notes).toHaveLength(1);
+    expect(curl.workout_exercise.rationale).toContain('no more than 5 kg');
   });
 
   it('week 1 target_sets equal the template base_sets', async () => {
@@ -479,13 +483,17 @@ describe('ad-hoc exercises, unilateral sides, blocked constraints', () => {
     const injuries = await call<{ items: Array<{ constraints: unknown[] }> }>(app, 'GET', '/injuries?status=active');
     expect(injuries.body.items[0]!.constraints).toHaveLength(2);
   });
-  it('clearing the chin-up constraint lets it prescribe', async () => {
+  it('clearing the chin-up constraint moves it off the clearance hold, but it is still constrained', async () => {
     const injuries = await call<{ items: Array<{ constraints: Array<{ id: string; requires_clearance: boolean }> }> }>(app, 'GET', '/injuries');
     const chin = injuries.body.items[0]!.constraints.find((c) => c.requires_clearance)!;
     const patched = await call<{ cleared_at: string | null }>(app, 'PATCH', `/constraints/${chin.id}`, { cleared_at: '2026-09-24T00:00:00.000Z' });
     expect(patched.body.cleared_at).toBe('2026-09-24T00:00:00.000Z');
     const w = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-26' });
-    expect(byName(w.body, EX.WEIGHTED_CHIN_UP).workout_exercise.reason).toBe('first_time');
+    // Clearing is not removing. The constraint is still active, so under A4 the engine still declines
+    // to pick a weight rather than falling through to first_time as it did before.
+    const chinUp = byName(w.body, EX.WEIGHTED_CHIN_UP).workout_exercise;
+    expect(chinUp.reason).toBe('constrained');
+    expect(chinUp.suggested_weight_kg).toBeNull();
   });
 });
 
