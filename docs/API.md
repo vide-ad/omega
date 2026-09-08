@@ -53,6 +53,7 @@ Base path: `/api/v1`. JSON in and out. Types for every request/response live in
 | PATCH | `/workouts/:id` | `WorkoutPatch` → `WorkoutDetail`. Setting `completed_at` recomputes `workout.is_compromised` (session rules) and each `workout_exercise.is_compromised` (pain / soreness on trained muscles) per docs/ENGINE-RULES.md, then refreshes `progression_state` for each exercise. |
 | DELETE | `/workouts/:id` | → 204 (cascades sets) |
 | POST | `/workouts/:id/exercises` | `{ exercise_id, order?, target_sets?, ... }` → `WorkoutExerciseDetail` (ad-hoc add; prescription still computed) |
+| DELETE | `/workouts/:id/exercises/:weid` | → 204. Removes one exercise from a running session and cascades its sets. A repeat, an unknown `:weid`, or a `:weid` belonging to a different workout all return 404 `not_found`. Refreshes `progression_state` for that exercise, and if the workout is already completed, recomputes the compromise caches. |
 | POST | `/workouts/:id/sets` | `SetCreate` → `SetLog` (201 / 200 if id already exists) |
 | PATCH | `/sets/:id` | `SetPatch` → `SetLog` |
 | DELETE | `/sets/:id` | → 204 |

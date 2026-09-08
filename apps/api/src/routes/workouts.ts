@@ -97,6 +97,27 @@ export function workoutRoutes(ctx: AppContext): Hono<Env> {
     return c.json(detail, created ? 201 : 200);
   });
 
+  r.delete('/workouts/:id/exercises/:weid', (c) => {
+    const w = mustGetWorkout(db, param(c, 'id'));
+    const weid = param(c, 'weid');
+    const we = repo.getWorkoutExercise(db, weid);
+    // A second delete of the same exercise is a 404, not a 500. Same for an id from another workout.
+    if (!we || we.workout_id !== w.id) throw notFound('workout_exercise', weid);
+    const exercise = repo.getExercise(db, we.exercise_id);
+    db.transaction(() => {
+      repo.deleteWorkoutExercise(db, we.id);   // set_logs cascade on the FK
+      // The progression cache is derived from history, and this session's history just changed.
+      if (exercise) {
+        const slot = repo.latestTemplateExerciseFor(db, exercise.id);
+        refreshProgressionState(db, exercise, slot ?? { base_sets: 3, is_priority: false, rep_low: exercise.default_rep_low, rep_high: exercise.default_rep_high, rir_target: exercise.default_rir_target, last_set_amrap: false }, null, today(ctx), loadConstraintContext(db));
+      }
+      // Removing an exercise can change whether the session counts as compromised.
+      const workout = repo.getWorkout(db, w.id);
+      if (workout && workout.completed_at !== null) finalizeWorkout(db, workout);
+    });
+    return c.body(null, 204);
+  });
+
   r.post('/workouts/:id/sets', async (c) => {
     const w = mustGetWorkout(db, param(c, 'id'));
     const input = await body(c, setCreateSchema);
