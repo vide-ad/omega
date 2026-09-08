@@ -1,6 +1,9 @@
 # Working in this repo (for Claude Code agents)
 
 - Read `docs/LANES.md` first and stay inside your lane's directories. `docs/ORCHESTRATION.md` explains the workflow.
+- Read `docs/HOUSE-STYLE.md` before writing anything a person reads. No em dashes, semi-colons, inline dots or
+  arrows. No slogans. Active voice. Plain language first, detail underneath. This covers chat, Slack, docs,
+  commit messages and the app's own text, including the engine's rationale strings.
 - pnpm 10.33 workspace, Node ≥ 22.12, TypeScript 5.9 strict, ESM only (`.js` extensions on relative imports in Node packages).
 - Build order: `pnpm --filter @omega/core build` before typechecking `apps/*` (they import core's dist).
 - Verify before pushing: `pnpm -r typecheck && pnpm -r test`, plus `pnpm --filter @omega/web build` for web changes.
