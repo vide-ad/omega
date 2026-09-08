@@ -196,6 +196,11 @@ export function insertWorkoutExercise(db: Db, we: WorkoutExercise): void {
   db.run(`INSERT INTO workout_exercises (${WE_COLS}) VALUES (${WE_COL_NAMES.map((c) => `$${c}`).join(', ')})`, bindWorkoutExercise(we));
 }
 
+/** Sets cascade from the FK on set_logs.workout_exercise_id, so this removes the exercise's log too. */
+export function deleteWorkoutExercise(db: Db, id: string): boolean {
+  return db.run('DELETE FROM workout_exercises WHERE id = $id', { id }).changes > 0;
+}
+
 export function setWorkoutExerciseCompromised(db: Db, id: string, isCompromised: boolean): void {
   db.run('UPDATE workout_exercises SET is_compromised = $c WHERE id = $id', { id, c: isCompromised });
 }

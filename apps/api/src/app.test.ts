@@ -1,4 +1,4 @@
-import type { CurrentMesocycle } from '@omega/core';
+import type { CurrentMesocycle, SetLog } from '@omega/core';
 import { DatabaseSync } from 'node:sqlite';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Hono } from 'hono';
@@ -494,6 +494,71 @@ describe('ad-hoc exercises, unilateral sides, blocked constraints', () => {
     const chinUp = byName(w.body, EX.WEIGHTED_CHIN_UP).workout_exercise;
     expect(chinUp.reason).toBe('constrained');
     expect(chinUp.suggested_weight_kg).toBeNull();
+  });
+});
+
+describe('DELETE /workouts/:id/exercises/:weid', () => {
+  const { app } = makeApp();
+
+  it('removes the exercise, cascades its sets, and is a 404 the second time', async () => {
+    const w = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-12' });
+    const workoutId = w.body.workout.id;
+    const before = w.body.exercises.length;
+    const target = byName(w.body, EX.LEG_EXTENSION).workout_exercise;
+
+    const s1 = await call<SetLog>(app, 'POST', `/workouts/${workoutId}/sets`, { workout_exercise_id: target.id, set_index: 1, weight_kg: 40, reps: 12, rir: 2 });
+    const s2 = await call<SetLog>(app, 'POST', `/workouts/${workoutId}/sets`, { workout_exercise_id: target.id, set_index: 2, weight_kg: 40, reps: 12, rir: 2 });
+    expect(s1.status).toBe(201);
+    expect(s2.status).toBe(201);
+
+    const del = await call(app, 'DELETE', `/workouts/${workoutId}/exercises/${target.id}`);
+    expect(del.status).toBe(204);
+
+    const after = await call<WorkoutDetail>(app, 'GET', `/workouts/${workoutId}`);
+    expect(after.body.exercises).toHaveLength(before - 1);
+    expect(after.body.exercises.map((e) => e.exercise.name)).not.toContain(EX.LEG_EXTENSION);
+    // The sets went with it rather than being orphaned.
+    expect(after.body.exercises.flatMap((e) => e.sets).map((x) => x.id)).not.toContain(s1.body.id);
+    expect((await call(app, 'GET', `/workouts/${workoutId}?include_sets=true`)).status).toBe(200);
+
+    // Idempotent in the sense the brief asks for: a repeat is a clean 404, not an odd error.
+    const again = await call<{ error: { code: string } }>(app, 'DELETE', `/workouts/${workoutId}/exercises/${target.id}`);
+    expect(again.status).toBe(404);
+    expect(again.body.error.code).toBe('not_found');
+  });
+
+  it('404s for an unknown workout, an unknown exercise, and one belonging to another workout', async () => {
+    const a = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-19' });
+    const b = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY2, date: '2026-09-20' });
+    const inA = a.body.exercises[0]!.workout_exercise.id;
+
+    expect((await call(app, 'DELETE', `/workouts/${a.body.workout.id}/exercises/does-not-exist`)).status).toBe(404);
+    expect((await call(app, 'DELETE', '/workouts/does-not-exist/exercises/' + inA)).status).toBe(404);
+    // An exercise id from workout A must not be deletable through workout B.
+    expect((await call(app, 'DELETE', `/workouts/${b.body.workout.id}/exercises/${inA}`)).status).toBe(404);
+    expect((await call<WorkoutDetail>(app, 'GET', `/workouts/${a.body.workout.id}`)).body.exercises.map((e) => e.workout_exercise.id)).toContain(inA);
+  });
+
+  it('needs write scope', async () => {
+    const w = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY2, date: '2026-09-21' });
+    const weid = w.body.exercises[0]!.workout_exercise.id;
+    const res = await call(app, 'DELETE', `/workouts/${w.body.workout.id}/exercises/${weid}`, undefined, READ);
+    expect(res.status).toBe(403);
+  });
+
+  it('removing a painful exercise from a completed session clears the session-level compromise it caused', async () => {
+    const w = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-13' });
+    const workoutId = w.body.workout.id;
+    const target = byName(w.body, EX.LEG_EXTENSION).workout_exercise;
+    await call(app, 'POST', `/workouts/${workoutId}/sets`, { workout_exercise_id: target.id, set_index: 1, weight_kg: 40, reps: 12, rir: 2, pain_severity: 'moderate' });
+    await call(app, 'PATCH', `/workouts/${workoutId}`, { completed_at: '2026-09-13T12:00:00.000Z' });
+    const done = await call<WorkoutDetail>(app, 'GET', `/workouts/${workoutId}`);
+    expect(byName(done.body, EX.LEG_EXTENSION).workout_exercise.is_compromised).toBe(true);
+
+    expect((await call(app, 'DELETE', `/workouts/${workoutId}/exercises/${target.id}`)).status).toBe(204);
+    const after = await call<WorkoutDetail>(app, 'GET', `/workouts/${workoutId}`);
+    expect(after.body.exercises.map((e) => e.exercise.name)).not.toContain(EX.LEG_EXTENSION);
+    expect(after.body.workout.completed_at).toBe('2026-09-13T12:00:00.000Z');
   });
 });
 
