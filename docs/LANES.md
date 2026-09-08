@@ -16,6 +16,9 @@ which worktrees solve; it is not an argument for lane separation.
 Channel `#project-omega`, `SLACK_BRIDGE_CHANNEL=C0C03JVQWSJ`. Full setup in `docs/agent-bridge.md`.
 Names taken across the workspace: `corvus`, `cass`, `wren`, `lyra`, `chalk`; `tempo` retired.
 
+The lead coder's onboarding, rules and first tasks are in `docs/CODER-BRIEF.md`. That is the document to hand
+a new coder. This page stays the authoritative list of who owns what.
+
 ## The two lanes
 
 | Lane | Owns | One worktree each |

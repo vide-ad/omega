@@ -1,0 +1,14 @@
+# Omega's vhost fragment. It is a DROP-IN, not a whole Caddyfile.
+#
+# droplet-setup.sh installs this at /etc/caddy/sites/omega.caddy and never edits
+# /etc/caddy/Caddyfile beyond making sure it imports that directory. This matters because the
+# droplet may already run other apps. Overwriting the main Caddyfile would take them all down,
+# which is the mistake corvus caught on North when court-watch's install brief tried it.
+#
+# OMEGA_HOST is substituted at install time. On this droplet that is normally an sslip.io name
+# derived from the IP, the same free pattern North's MCP endpoint uses.
+OMEGA_HOST {
+	encode zstd gzip
+	# One Node process serves both the API and the client. Caddy only terminates TLS.
+	reverse_proxy 127.0.0.1:8787
+}
