@@ -22,7 +22,10 @@ function mustGetWorkout(db: Db, id: string): Workout {
   return w;
 }
 
-/** Set-level rules from docs/API.md: AMRAP forces RIR 0; side must match the exercise's laterality. */
+/**
+ * Set-level rules from docs/API.md. An AMRAP set is forced to RIR 0 and to observed, because going to
+ * failure is an observation whatever the client sent. Side must match the exercise's laterality.
+ */
 export function normaliseSet(db: Db, s: SetLog): SetLog {
   const we = repo.getWorkoutExercise(db, s.workout_exercise_id);
   if (!we) throw notFound('workout_exercise', s.workout_exercise_id);
@@ -30,7 +33,8 @@ export function normaliseSet(db: Db, s: SetLog): SetLog {
   if (!exercise) throw notFound('exercise', we.exercise_id);
   if (exercise.is_unilateral && s.side === 'bilateral') throw validationError(`${exercise.name} is unilateral: side must be left or right`, { field: 'side' });
   if (!exercise.is_unilateral && s.side !== 'bilateral') throw validationError(`${exercise.name} is bilateral: side must be 'bilateral'`, { field: 'side' });
-  return s.is_amrap ? { ...s, rir: 0 } : s;
+  const rir_observed = s.rir_observed ?? true;
+  return s.is_amrap ? { ...s, rir: 0, rir_observed: true } : { ...s, rir_observed };
 }
 
 export function workoutRoutes(ctx: AppContext): Hono<Env> {

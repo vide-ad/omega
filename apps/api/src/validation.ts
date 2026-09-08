@@ -186,6 +186,9 @@ export const setCreateSchema = z.object({
   weight_kg: nonNeg.max(1000),
   reps: nonNegInt.max(500),
   rir: z.number().int().min(0).max(20).nullable().default(null),
+  /** Absent means observed, so importers and the coach are unaffected. Only a client that knows its
+   *  value was an untouched default sends false. See "The effort test" in docs/ENGINE-RULES.md. */
+  rir_observed: z.boolean().default(true),
   tempo: z.string().max(20).nullable().default(null),
   rest_taken_seconds: nonNegInt.nullable().default(null),
   pain_severity: painSchema.default('none'),
@@ -202,6 +205,7 @@ export const setPatchSchema = z.object({
   weight_kg: nonNeg.max(1000).optional(),
   reps: nonNegInt.max(500).optional(),
   rir: z.number().int().min(0).max(20).nullable().optional(),
+  rir_observed: z.boolean().optional(),
   tempo: z.string().max(20).nullable().optional(),
   rest_taken_seconds: nonNegInt.nullable().optional(),
   pain_severity: painSchema.optional(),

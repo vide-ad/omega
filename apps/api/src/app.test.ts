@@ -1,4 +1,6 @@
 import type { CurrentMesocycle, SetLog } from '@omega/core';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Hono } from 'hono';
@@ -9,7 +11,7 @@ import {
 } from '@omega/core';
 import { createApp } from './app.js';
 import { Db } from './db/connection.js';
-import { runMigrations } from './db/migrate.js';
+import { DEFAULT_MIGRATIONS_DIR as MIGRATIONS_DIR, runMigrations } from './db/migrate.js';
 import type { Env } from './routes/shared.js';
 import { seedDatabase } from './seed.js';
 
@@ -559,6 +561,95 @@ describe('DELETE /workouts/:id/exercises/:weid', () => {
     const after = await call<WorkoutDetail>(app, 'GET', `/workouts/${workoutId}`);
     expect(after.body.exercises.map((e) => e.exercise.name)).not.toContain(EX.LEG_EXTENSION);
     expect(after.body.workout.completed_at).toBe('2026-09-13T12:00:00.000Z');
+  });
+});
+
+describe('rir_observed (amendment A1)', () => {
+  it('the migration reads existing rows as observed, since they predate the field', () => {
+    // Stage a database as it stood before 002: apply 001 only, then write set rows the old way.
+    // Foreign keys stay off here so the fixture is three set rows and nothing else.
+    const db = new Db(new DatabaseSync(':memory:', { enableForeignKeyConstraints: false }));
+    db.exec(readFileSync(join(MIGRATIONS_DIR, '001_initial.sql'), 'utf8'));
+    const row = (id: string, rir: string, amrap = 0) =>
+      db.exec(`INSERT INTO set_logs (id, workout_exercise_id, set_index, weight_kg, reps, rir, is_amrap, completed_at)
+               VALUES ('${id}', 'we1', 1, 42.5, 10, ${rir}, ${amrap}, '2026-09-01T10:00:00.000Z')`);
+    row('real', '2');       // a genuinely recorded effort value
+    row('blank', 'NULL');   // nothing recorded
+    row('amrap', '0', 1);   // taken to failure
+
+    const applied = runMigrations(db);
+    expect(applied).toContain('002_rir_observed.sql');
+
+    const observed = (id: string) => db.get<{ rir_observed: number }>('SELECT rir_observed FROM set_logs WHERE id = $id', { id })!.rir_observed;
+    // The point of the backfill: real history keeps progressing rather than being frozen by a field
+    // that did not exist when it was written.
+    expect(observed('real')).toBe(1);
+    expect(observed('amrap')).toBe(1);
+    // A row with no effort value observed nothing. It changes no behaviour either way, since a null
+    // RIR is excluded from the effort mean regardless.
+    expect(observed('blank')).toBe(0);
+  });
+
+  it('defaults to true on create, stores false when the client says so, and survives a round trip', async () => {
+    const { app } = makeApp();
+    const w = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-12' });
+    const wid = w.body.workout.id;
+    const weid = byName(w.body, EX.BENCH).workout_exercise.id;
+
+    const omitted = await call<SetLog>(app, 'POST', `/workouts/${wid}/sets`, { workout_exercise_id: weid, set_index: 1, weight_kg: 42.5, reps: 10, rir: 3 });
+    expect(omitted.body.rir_observed).toBe(true);
+
+    const assumed = await call<SetLog>(app, 'POST', `/workouts/${wid}/sets`, { workout_exercise_id: weid, set_index: 2, weight_kg: 42.5, reps: 10, rir: 3, rir_observed: false });
+    expect(assumed.body.rir_observed).toBe(false);
+
+    const reread = await call<WorkoutDetail>(app, 'GET', `/workouts/${wid}`);
+    const sets = byName(reread.body, EX.BENCH).sets;
+    expect(sets.find((x) => x.id === assumed.body.id)!.rir_observed).toBe(false);
+    expect(sets.find((x) => x.id === omitted.body.id)!.rir_observed).toBe(true);
+
+    // A patch can correct it either way.
+    const fixed = await call<SetLog>(app, 'PATCH', `/sets/${assumed.body.id}`, { rir: 4, rir_observed: true });
+    expect(fixed.body.rir_observed).toBe(true);
+    expect(fixed.body.rir).toBe(4);
+  });
+
+  it('an AMRAP set is forced to RIR 0 and observed, even when the client sends false', async () => {
+    const { app } = makeApp();
+    const w = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-12' });
+    const wid = w.body.workout.id;
+    const weid = byName(w.body, EX.BENCH).workout_exercise.id;
+    const amrap = await call<SetLog>(app, 'POST', `/workouts/${wid}/sets`, { workout_exercise_id: weid, set_index: 1, weight_kg: 42.5, reps: 14, rir: 3, is_amrap: true, rir_observed: false });
+    expect(amrap.body.rir).toBe(0);
+    expect(amrap.body.rir_observed).toBe(true);
+  });
+
+  // The whole point of items 1 and 4 together. Until the column existed, the effort test could never
+  // fire in production because every row read as observed.
+  it('an untouched effort default no longer adds weight to the bar, end to end', async () => {
+    const assumedRun = async (rirObserved: boolean) => {
+      const { app } = makeApp();
+      const first = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-12' });
+      const wid = first.body.workout.id;
+      const bench = byName(first.body, EX.BENCH).workout_exercise;
+      expect(bench.suggested_weight_kg).toBe(42.5);
+      expect(bench.target_rir).toBe(3);
+      // Three sets at the top of the range, reporting exactly the target effort.
+      for (const i of [1, 2, 3]) {
+        await call(app, 'POST', `/workouts/${wid}/sets`, { workout_exercise_id: bench.id, set_index: i, weight_kg: 42.5, reps: 10, rir: 3, rir_observed: rirObserved });
+      }
+      await call(app, 'PATCH', `/workouts/${wid}`, { completed_at: '2026-09-12T12:00:00.000Z' });
+      const next = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-19' });
+      return byName(next.body, EX.BENCH).workout_exercise;
+    };
+
+    const observed = await assumedRun(true);
+    expect(observed.reason).toBe('progress_load');
+    expect(observed.suggested_weight_kg).toBe(45);
+
+    const assumed = await assumedRun(false);
+    expect(assumed.reason).toBe('consolidate');
+    expect(assumed.suggested_weight_kg).toBe(42.5);
+    expect(assumed.rationale).toMatch(/how hard/i);
   });
 });
 
