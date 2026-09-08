@@ -88,6 +88,13 @@ convenience default was converting "we don't know" into "the lifter said it was 
 whole engine turns on. Assumed RIR still counts everywhere else: for hard-set volume, for qualification, and for
 `progress_reps`. It buys you rep progression, not load progression.
 
+**A withheld progression must say so.** When C3 would have fired on reps alone but is held back for want of
+observed effort, the prescription's `rationale` must state that, and what unlocks it — one line where the load
+appears, e.g. *"Holding 42.5 kg — tell me how hard the last set was and I can move it up."* Not an error, not a
+nag. Without this line the rule trades one silent wrong (an assumed value treated as observed) for another (a
+withheld progression that looks like a normal hold). Silent failure was the most expensive bug class on North;
+this is the one place Omega could grow one.
+
 **Existing rows** predate the field: treat a non-null `rir` with no `rir_observed` as observed, since assuming
 otherwise would retroactively freeze progression on real history.
 
@@ -99,17 +106,44 @@ The rationale always names the weight actually prescribed (the clamp is applied 
 explains what the clamp changed; `target_reps_by_set` is always exactly `target_sets` long. History is ordered by
 date, then completion time, then id, so two sessions on the same date resolve deterministically.
 
-## Known deliberate deviations from the spec text
+## Deviations from the spec text
 
-| Spec says | Engine does | Why |
-|---|---|---|
-| §4 null-RIR sets don't count | count with assumed RIR 2 (§5.1) | §5.1 is more specific |
-| §5.2 constraint ⇒ exercise compromised | constraint ⇒ clamp after the decision | otherwise constrained lifts never progress |
-| §5.2 soreness compromises the workout | soreness compromises only exercises training that muscle | sore biceps should not block squats |
-| §5.5 compare to `T` (template) | compare to the session's own stored targets | RIR ramps and multi-template rep ranges |
-| §4 ISO weeks | mesocycle-anchored 7-day blocks inside a block | Sat/Sun/Wed microcycle |
-| §9.5 bench 42 kg | 42.5 kg | 2.5 kg barbell grid |
-| §7 "RIR pre-filled with the target" | pre-fill stays, but an untouched default cannot justify adding load | a default is not an observation |
+The spec had 32 internal contradictions. The rulebook resolves them, but not all resolutions are the same
+kind of decision, and the distinction decides who gets to make them:
+
+- **Forced** — only one reading is coherent. The repository settles it. Recorded, not approved.
+- **Chosen** — both readings work and one was picked. That is a product decision and it needs David's explicit
+  yes, even after the fact. Each is listed in `docs/DECISIONS-FOR-DAVID.md` until he rules.
+
+### Forced
+
+| # | Spec says | Engine does | Why only this reading works |
+|---|---|---|---|
+| F1 | §4 null-RIR sets don't count for volume | count with assumed RIR 2 (§5.1) | §4 and §5.1 flatly contradict; §5.1 is the specific rule |
+| F2 | §4 ISO weeks | 7-day blocks anchored at the mesocycle start | a Sat/Sun/Wed microcycle straddles two ISO weeks, so the dashboard could never match the block's ramp |
+| F3 | §5.5 judge L against `T` (current template) | judge L against its own stored targets | with §9.2's RIR ramp, a week-5 session prescribed RIR 1 and performed at RIR 1 would read as *under* the template's RIR 2 forever |
+| F4 | §9.5 bench 42 kg | 42.5 kg | 2.5 kg barbell grid |
+
+### Chosen — pending David's yes
+
+| # | Spec says | Engine does | The other reading, which also works | Status |
+|---|---|---|---|---|
+| P1 | §5.2 an active constraint makes the exercise compromised, so it never qualifies (§5.3) | constrained exercises qualify; the constraint is a **clamp after** the load decision | hold §5.2/§5.3 and fix §3.2 and §9.4 instead — constrained lifts never progress by engine, coach escalates by hand | **pending** |
+| P2 | §5.2 soreness ≥4 compromises the whole workout | soreness compromises only exercises training that muscle (credit ≥ 0.5) | keep it session-wide: sore biceps invalidate squat progression too | **pending** |
+| P3 | §7 RIR "pre-filled with the target" | pre-fill stays, but an untouched default cannot justify `progress_load` | pre-fill counts as observed; one tap fewer, and the engine adds load on defaults | **pending** |
+
+P1 has a safety dimension — it is made under a radial-nerve constraint. P3 decides what the app demands of its
+user in return for load progression. Neither is something the codebase can answer.
+
+## Amendments
+
+Never a silent edit. Every change to a rule is numbered here with its reason.
+
+| # | Date | Change | Reason |
+|---|---|---|---|
+| A1 | 8 Sep 2026 | `SetLog.rir_observed`; *The effort test* replaces "mean RIR over non-AMRAP units, none → satisfied" | design review: an untouched pre-fill and a genuine "easy" report produced identical `progress_load` output |
+| A2 | 8 Sep 2026 | a withheld `progress_load` must explain itself in the rationale | wren's review: otherwise A1 swaps one silent failure for another |
+| A3 | 8 Sep 2026 | deviation table split into forced and chosen; chosen ones go to David | wren's review: a document chalk wrote was overriding one David commissioned without his consent |
 
 ## Seed-data caveats surfaced by the audit (not changed; the user decides)
 

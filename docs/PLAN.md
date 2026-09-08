@@ -25,6 +25,13 @@ LLM-coach API, in real use for one full mesocycle before anything fancier.
 - **M2 — replaces Strong:** readiness form in daily use, volume dashboard, coach reading `/summary`, backups.
 - **M3 — coach loop:** proposals (pending_review) with in-app accept/reject, `/prescriptions/preview`, Apple Health cardio import.
 - **M4 — one full mesocycle in real use**, then decide on pose metrics.
+- **M5 — video intake for form review.** The first thing in Omega that warrants a *contract* rather than a spec:
+  upload, storage, transcoding, inference, and a client handling latency it does not control — plus video of a
+  person's body, which makes retention, deletion and access real questions. To pin before a line is written:
+  what happens to a video after analysis (delete by default, or retained — where, how long); synchronous or
+  queued inference and what the client shows meanwhile; what happens on failed or low-confidence analysis, since
+  a wrong form correction is worse than none; size, format and duration limits enforced server-side.
+  **This is also the trigger for splitting the server lane** — see `docs/LANES.md`.
 
 ## Decisions made (and why)
 

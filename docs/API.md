@@ -86,8 +86,15 @@ Base path: `/api/v1`. JSON in and out. Types for every request/response live in
 | PATCH | `/constraints/:id` | `Partial<ExerciseConstraint>` → `ExerciseConstraint` |
 | DELETE | `/constraints/:id` | → 204 |
 
-`pending_review` proposals for coach-originated writes (spec §6.2) are **deferred past MVP**; for now the coach's
-write token mutates directly and the app shows the change. Tracked as a lane task.
+### The coach write gate
+
+Spec §6.2 wants coach-originated changes to be **proposals the user confirms in-app**, not silent mutations. That
+layer is not built yet. Until it is:
+
+**The coach token is `OMEGA_TOKEN_READ`, and nothing else.** This is a hard precondition, not a plan: `pending_review`
+proposals ship *before* any coach credential is ever issued with write scope, and the token's scope is the
+enforcement. A coach with write access and no proposal layer can silently rewrite volume targets or a template,
+and silent is the word that matters. Deferred items drift; this one may not.
 
 ## Offline model (spec principle 3, §7)
 

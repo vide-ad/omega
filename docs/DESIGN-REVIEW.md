@@ -101,6 +101,12 @@ protection survives; fatigue protection does not.
 bottom nav, and move the single control that carries most of the value — *"today was rough"* — onto the session
 screen as one tap. No morning ritual, and the engine keeps its escape hatch.
 
+*Note on the evidence (wren's review).* "David finds it unnecessary" at setup time is weak evidence that it is
+unwanted — on North he never set an availability window and then found the scheduler "messy", because it was
+scheduling around a life it knew nothing about. Non-use at setup is often non-discovery. The cost of being wrong
+here is near zero because schema and endpoints stay, so the call stands; but "David didn't use it" must not harden
+into "users don't need it" without something better behind it.
+
 ## Left open, deliberately
 
 Two things the reviewer flagged that a mockup cannot settle, both requiring a phone and a real session:

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Block commits that add something shaped like a credential.
+# Shape, not word: prose about "tokens" is fine; an actual xoxb-… is not.
+# Only ADDED lines are scanned, so removing a leaked secret is never blocked by the secret itself.
+# Output is censored so the hook does not move the leak into the terminal.
+set -u
+pattern='(xox[abpors]-[A-Za-z0-9-]{10,}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(TOKEN|SECRET|PASSWORD|API_KEY)[A-Z_]*\s*[=:]\s*["'"'"']?[A-Za-z0-9+/_-]{20,})'
+hits=$(git diff --cached --unified=0 --no-color -- . ':(exclude)*.md' ':(exclude)tools/hooks/*' \
+  | grep -E '^\+[^+]' | grep -nE "$pattern" || true)
+[ -z "$hits" ] && exit 0
+echo "pre-commit: refusing to commit — added line(s) look like a credential:" >&2
+echo "$hits" | sed -E 's/(xox[abpors]-|ghp_|github_pat_|sk-|AKIA)[A-Za-z0-9+\/_-]{4}[A-Za-z0-9+\/_-]*/\1****/g; s/([=:]\s*["'"'"']?)[A-Za-z0-9+\/_-]{4}[A-Za-z0-9+\/_-]*/\1****/g' | cut -c1-140 >&2
+echo "Put the value in a file outside the repo and commit the path instead. See docs/PROCESS.md." >&2
+exit 1
