@@ -1,6 +1,6 @@
 # Omega — project plan
 
-**PM:** Chalk (Claude, cloud session). **Goal:** a phone-usable training log that replaces Strong, with an
+**PM:** chalk (Claude, cloud session). **Client:** Flutter, built page by page — see `docs/CLIENT-DECISION.md`. **Goal:** a phone-usable training log that replaces Strong, with an
 LLM-coach API, in real use for one full mesocycle before anything fancier.
 
 ## Status against the spec's build order (§10)
