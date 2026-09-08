@@ -77,6 +77,7 @@ export function rowToSet(r: Row): SetLog {
     weight_kg: num(r.weight_kg),
     reps: num(r.reps),
     rir: numOrNull(r.rir),
+    rir_observed: bool(r.rir_observed),
     tempo: strOrNull(r.tempo),
     rest_taken_seconds: numOrNull(r.rest_taken_seconds),
     pain_severity: str(r.pain_severity) as SetLog['pain_severity'],
@@ -89,7 +90,7 @@ export function rowToSet(r: Row): SetLog {
 const W_COL_NAMES = ['id', 'template_id', 'template_version', 'mesocycle_id', 'week_number', 'date', 'started_at', 'completed_at', 'readiness_id', 'session_rpe', 'notes', 'is_compromised'] as const;
 const WE_COL_NAMES = ['id', 'workout_id', 'exercise_id', 'order', 'target_sets', 'target_rep_low', 'target_rep_high', 'target_rir', 'suggested_weight_kg', 'rest_seconds', 'notes',
   'target_reps_by_set', 'target_tempo', 'last_set_amrap', 'reason', 'rationale', 'flags', 'constraint_notes', 'based_on_workout_id', 'is_compromised'] as const;
-const SET_COL_NAMES = ['id', 'workout_exercise_id', 'set_index', 'side', 'is_warmup', 'is_amrap', 'weight_kg', 'reps', 'rir', 'tempo', 'rest_taken_seconds', 'pain_severity', 'pain_note', 'media_id', 'completed_at'] as const;
+const SET_COL_NAMES = ['id', 'workout_exercise_id', 'set_index', 'side', 'is_warmup', 'is_amrap', 'weight_kg', 'reps', 'rir', 'rir_observed', 'tempo', 'rest_taken_seconds', 'pain_severity', 'pain_note', 'media_id', 'completed_at'] as const;
 
 const q = (c: string) => (c === 'order' ? '"order"' : c);
 const W_COLS = W_COL_NAMES.map(q).join(', ');
@@ -260,13 +261,13 @@ export function listSetsForWorkout(db: Db, workoutId: string): SetLog[] {
 }
 
 export function insertSet(db: Db, s: SetLog): void {
-  db.run(`INSERT INTO set_logs (${SET_COLS}) VALUES (${SET_COL_NAMES.map((c) => `$${c}`).join(', ')})`, { ...s });
+  db.run(`INSERT INTO set_logs (${SET_COLS}) VALUES (${SET_COL_NAMES.map((c) => `$${c}`).join(', ')})`, { ...s, rir_observed: s.rir_observed ?? true });
 }
 
 export function updateSet(db: Db, s: SetLog): void {
   db.run(`UPDATE set_logs SET set_index = $set_index, side = $side, is_warmup = $is_warmup, is_amrap = $is_amrap, weight_kg = $weight_kg, reps = $reps,
-    rir = $rir, tempo = $tempo, rest_taken_seconds = $rest_taken_seconds, pain_severity = $pain_severity, pain_note = $pain_note, media_id = $media_id,
-    completed_at = $completed_at WHERE id = $id`, omit({ ...s }, 'workout_exercise_id'));
+    rir = $rir, rir_observed = $rir_observed, tempo = $tempo, rest_taken_seconds = $rest_taken_seconds, pain_severity = $pain_severity, pain_note = $pain_note, media_id = $media_id,
+    completed_at = $completed_at WHERE id = $id`, omit({ ...s, rir_observed: s.rir_observed ?? true }, 'workout_exercise_id'));
 }
 
 export function deleteSet(db: Db, id: string): boolean {
