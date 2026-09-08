@@ -44,9 +44,12 @@ workout date falls inside the block, else ISO weeks; sets are assigned by `Worko
 ## Prescription procedure (spec §5.5)
 
 ```
-A  eligibility
-   A1 any applicable constraint with blocked            → reason blocked, omit = true (API leaves it out of the session)
-   A2 requires_clearance and cleared_at = null           → reason requires_clearance, suggested null, stays in session
+A  eligibility (a constraint stops the engine before it computes anything)
+   A1 any applicable constraint with blocked             reason blocked, omit = true (the API leaves it out of the session)
+   A2 requires_clearance and cleared_at = null           reason requires_clearance, suggested null, stays in session
+   A3 any other applicable constraint                    reason constrained, suggested null, stays in session.
+      Stage B still runs. Stages C and D are skipped. The cap, rep floor, tempo and physio note are shown as
+      information, not as a prescription. David sets the weight.
 B  structure (always)
    target_sets = max(1, round_half_up((base_sets + (is_priority ? week.set_delta : 0)) × week.volume_multiplier))
    target_rir  = clamp(template.rir_target, week.rir_target_low, week.rir_target_high)   (no week → template)
@@ -62,10 +65,9 @@ C  load decision (first match wins)
    C6 otherwise                                          → progress_reps: per-unit target = min(reps + 1, T.rep_high); extra sets = T.rep_low
    C7 if M ≠ L (most recent done session was non-qualifying)
                                                          → relabel repeat_after_compromised, keep the C3–C6 output, stalls untouched
-D  constraint clamp (when any constraint applies and A did not stop)
-   weight = min(weight, max_weight_kg) floored to the increment grid; first_time with null weight starts at the cap
-   rep_low = max(rep_low, min_reps); rep_high = max(rep_high, rep_low); per-set targets ≥ min_reps; chalk = required_tempo
-   flag constrained; constraint notes attached; rationale states what the clamp changed
+D  constraint display (A2 and A3 only, since a constraint now stops the engine)
+   rep_low = max(rep_low, min_reps), rep_high = max(rep_high, rep_low), target_tempo = required_tempo
+   flag constrained, constraint notes attached, no weight computed and none shown
 E  stall_review flag when consecutive_stalls ≥ 3
 ```
 
@@ -124,16 +126,15 @@ kind of decision, and the distinction decides who gets to make them:
 | F3 | §5.5 judge L against `T` (current template) | judge L against its own stored targets | with §9.2's RIR ramp, a week-5 session prescribed RIR 1 and performed at RIR 1 would read as *under* the template's RIR 2 forever |
 | F4 | §9.5 bench 42 kg | 42.5 kg | 2.5 kg barbell grid |
 
-### Chosen — pending David's yes
+### Chosen, and ruled on by David, 8 September 2026
 
-| # | Spec says | Engine does | The other reading, which also works | Status |
-|---|---|---|---|---|
-| P1 | §5.2 an active constraint makes the exercise compromised, so it never qualifies (§5.3) | constrained exercises qualify; the constraint is a **clamp after** the load decision | hold §5.2/§5.3 and fix §3.2 and §9.4 instead — constrained lifts never progress by engine, coach escalates by hand | **pending** |
-| P2 | §5.2 soreness ≥4 compromises the whole workout | soreness compromises only exercises training that muscle (credit ≥ 0.5) | keep it session-wide: sore biceps invalidate squat progression too | **pending** |
-| P3 | §7 RIR "pre-filled with the target" | pre-fill stays, but an untouched default cannot justify `progress_load` | pre-fill counts as observed; one tap fewer, and the engine adds load on defaults | **pending** |
+| # | Ruling |
+|---|---|
+| P1 | **Reversed.** David: *"If injured let the user figure it out no recommendation required."* The engine no longer prescribes a weight for a constrained exercise. His spec (5.2, 5.3) was right and my clamp was wrong. See amendment A4. |
+| P2 | **Kept as built.** Soreness compromises only the exercises that train that muscle, not the whole session. David noted he distrusts soreness tracking generally, which matters less than it sounds: the rule only fires when he logs a rating of 4 or 5, and he has already dropped the daily readiness form, so it will rarely fire at all. |
+| P3 | **Kept as built.** David: *"It should tell the app nothing."* An untouched effort slider is recorded as no answer and cannot add weight to the bar. |
 
-P1 has a safety dimension — it is made under a radial-nerve constraint. P3 decides what the app demands of its
-user in return for load progression. Neither is something the codebase can answer.
+Nothing on this page now overrides David's spec without his explicit yes.
 
 ## Amendments
 
@@ -144,6 +145,7 @@ Never a silent edit. Every change to a rule is numbered here with its reason.
 | A1 | 8 Sep 2026 | `SetLog.rir_observed`; *The effort test* replaces "mean RIR over non-AMRAP units, none → satisfied" | design review: an untouched pre-fill and a genuine "easy" report produced identical `progress_load` output |
 | A2 | 8 Sep 2026 | a withheld `progress_load` must explain itself in the rationale | wren's review: otherwise A1 swaps one silent failure for another |
 | A3 | 8 Sep 2026 | deviation table split into forced and chosen; chosen ones go to David | wren's review: a document chalk wrote was overriding one David commissioned without his consent |
+| A4 | 8 Sep 2026 | a constraint stops the engine (new A3) instead of clamping its answer (old stage D); no weight is prescribed for a constrained exercise | David's ruling on P1. This restores his spec 5.2 and 5.3 and removes the clamp arithmetic entirely |
 
 ## Seed-data caveats surfaced by the audit (not changed; the user decides)
 

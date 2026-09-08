@@ -36,19 +36,28 @@ sharing a working copy.
 a client handling latency it does not control, and video of a person's body with real retention and access
 questions. Clean API seam by nature. Split the server lane there, and not before. Details in `docs/PLAN.md` M5.
 
-## Order of work — wren's §8, unchanged
+## Order of work
 
-1. **The RIR effort test, with the explanatory line.** `docs/ENGINE-RULES.md` → *The effort test* and amendments
-   A1–A2. About an hour, fully specified, tests must reproduce the four-row table in `docs/DESIGN-REVIEW.md` with
-   only row 1 changing. **Nothing precedes this** — it protects data that starts accumulating the moment the PWA
-   is deployed. Server lane.
-2. `DELETE /workouts/:id/exercises/:weid` — small, known, missing. Server lane.
-3. `rir_observed` column + migration (existing non-null `rir` → observed); accept on set writes; force true with
+Wren's §8 order, with one item inserted at position 2 by David's ruling on P1. The effort test still goes
+first, for wren's reason: it is the only item here that protects data from being recorded wrongly.
+
+1. **The effort test, with the explanatory line.** See `docs/ENGINE-RULES.md`, amendments A1 and A2. About an
+   hour and fully specified. The tests must reproduce the four-row table in `docs/DESIGN-REVIEW.md`, with only
+   row 1 changing. **Nothing precedes this.** It is the only item here that stops data being recorded wrongly,
+   and it matters from the moment the interim app is deployed. Server lane.
+2. **Constraints stop the engine (amendment A4).** David reversed chalk's clamp on 8 September. Delete stage D's
+   weight arithmetic. Any active constraint on an exercise now gives reason `constrained` with
+   `suggested_weight_kg` null, and the exercise stays in the session showing its cap, rep floor, tempo and physio
+   note as information. Stage B still runs. This removes code rather than adding it, including the
+   `floorToIncrement` path and the case where a first-time constrained exercise started at the cap. Existing
+   tests asserting a curl is prescribed at 5 kg flip to asserting null. Server lane.
+3. `DELETE /workouts/:id/exercises/:weid`, small, known, missing. Server lane.
+4. `rir_observed` column + migration (existing non-null `rir` → observed); accept on set writes; force true with
    `rir = 0` for AMRAP. Server lane.
-4. Strong CSV importer as a CLI with `--units` and `--dry-run` — spec follows once David sends a sample. Server lane.
-5. **Then Flutter, page by page**, starting with the session screen. Each page gets a spec in `docs/pages/` that
+5. Strong CSV importer as a CLI with `--units` and `--dry-run` — spec follows once David sends a sample. Server lane.
+6. **Then Flutter, page by page**, starting with the session screen. Each page gets a spec in `docs/pages/` that
    has passed a code-reality check before it is build-ready. Client lane.
-6. `pending_review` proposals — the gate on ever giving the coach write scope. Server lane, when David wants the
+7. `pending_review` proposals — the gate on ever giving the coach write scope. Server lane, when David wants the
    coach writing.
 
 ## Carried from the design review

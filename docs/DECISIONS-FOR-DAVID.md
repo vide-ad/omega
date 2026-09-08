@@ -1,12 +1,14 @@
 # Three decisions that are yours, not mine
 
-Wren drew the line: chalk can settle anything the code can settle, but not anything only your preferences can
-settle. I settled these three anyway, because your spec contradicted itself and I needed one coherent reading to
-build against. All three are built and tested. Each has a second reading that also works, so each needs your yes.
+**All three were ruled on by David on 8 September 2026. This page is now a record, not a request.**
+P1 reversed what chalk built. P2 and P3 confirmed it. The rulings are at the bottom of each section and in
+`docs/ENGINE-RULES.md` under Amendments.
 
-Answer yes or no to each. That is the whole task. I expect you to agree with all three, and that is not a reason
-to skip it. A document I wrote is currently overriding a document you commissioned. Your consent is what makes
-that legitimate.
+Wren drew the line: chalk can settle anything the code can settle, but not anything only David's preferences can
+settle. Chalk settled these three anyway, because the spec contradicted itself and he needed one coherent reading
+to build against. Each had a second reading that also worked, so each went back to David.
+
+He ruled on all three, and he reversed the one with a safety dimension. That is the argument for asking.
 
 ---
 
@@ -33,7 +35,11 @@ whether the engine does the arithmetic underneath it.
 
 **My recommendation.** Option A, as built.
 
-**Your answer:**
+**David's ruling, 8 September 2026. Option B.** *"If injured let the user figure it out no recommendation
+required."* The engine now prescribes no weight for a constrained exercise. It still shows the cap, the rep
+floor, the tempo and the physio note as information. He sets the weight himself. One consequence he should
+expect: the physio's "escalate about 1 kg per two pain-free weeks" is entirely manual now, and the app will
+never nudge him toward it.
 
 ---
 
@@ -55,7 +61,10 @@ discards good data on every muscle that was fine.
 
 **My recommendation.** Option A, as built.
 
-**Your answer:**
+**David's ruling, 8 September 2026. Option A, as built.** He added that he distrusts soreness tracking in
+general and thinks it invites trouble. That is a fair instinct and the exposure is small: the rule only fires
+on a logged rating of 4 or 5, and he has already dropped the daily readiness form, so in practice it will
+almost never fire.
 
 ---
 
@@ -86,7 +95,7 @@ quietly stops progressing and never says why.
 
 **My recommendation.** Option A, as built.
 
-**Your answer:**
+**David's ruling, 8 September 2026. Option A, as built.** *"It should tell the app nothing."*
 
 ---
 
