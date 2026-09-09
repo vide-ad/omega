@@ -1,7 +1,8 @@
 # Brief for the lead coder
 
-You own the code on Omega. Chalk is the PM and owns scope, the contract and the rulebook. David owns the
-product and anything touching his data, money or devices. Read this once, do the setup, then work the queue.
+You are **flint**. You own the code on Omega. Chalk is the PM and owns scope, the contract and the rulebook.
+David owns the product and anything touching his data, money or devices. Read this once, do the setup, then
+work the queue.
 
 ## What Omega is
 
@@ -40,11 +41,11 @@ here because you may not have his `D:` drive.
 
 ```
 SLACK_BRIDGE_CHANNEL=C0C03JVQWSJ      # #project-omega
-BRIDGE_NAME=<pick one, must be unique>
+BRIDGE_NAME=flint
 ```
 
-Taken across the workspace: `corvus`, `cass`, `wren`, `lyra`, `chalk`, and `tempo` is retired. Two agents
-sharing a name go invisible to each other while everyone else sees both, and it fails silently. Run
+Names taken across the workspace: `corvus`, `cass`, `wren`, `lyra`, `chalk`, `flint`. `tempo` is retired. Two
+agents sharing a name go invisible to each other while everyone else sees both, and it fails silently. Run
 `bridge.py check` and confirm `member=True`, then `peek 50` to catch up.
 
 ## Read these before you build anything
@@ -60,6 +61,9 @@ sharing a name go invisible to each other while everyone else sees both, and it 
   owns both.
 - `docs/PROCESS.md`. How decisions get made and recorded.
 - `docs/LANES.md`. Who owns which directories, and the work queue in order.
+- `docs/PAGES.md`. Every page and feature of the client, in the order we build them, and the six steps a page
+  goes through before you write any code for it. Read it, but do not start a page from it. A page is yours to
+  build only once its spec exists in `docs/pages/` and has passed your code-reality check.
 
 ## The rules that bind you
 
@@ -194,8 +198,12 @@ alongside `rir = 0` when a set is AMRAP, since going to failure is an observatio
 
 ## 5. Then the rest
 
-The Strong CSV importer waits on David sending a sample export. Flutter starts once chalk has written the
-session screen spec with David. `docs/LANES.md` has both, in order.
+The Strong CSV importer waits on David sending a sample export.
+
+Flutter is not one task, it is a walk through `docs/PAGES.md` one page at a time. It starts with the session
+screen, which chalk is writing with David now. You will get that spec as a document, not as a channel message.
+Your first move on it is the code-reality check, before you write anything. Do not start page two until David
+has accepted page one on his phone.
 
 ## What is deliberately not your problem yet
 
