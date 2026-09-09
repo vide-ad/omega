@@ -70,6 +70,31 @@ first, for wren's reason. It is the only item here that protects data from being
 Items 1 to 5 are the server queue and they run in parallel with chalk and David writing page specs. Item 6 is
 the whole client build and it is governed by `docs/PAGES.md`, not by this list.
 
+### Where the queue stands, 9 September
+
+Flint built items 1 to 4 in a stack of four pull requests, 2, 4, 6 and 8, all green on Ubuntu and Windows.
+Chalk reviewed them on 9 September against the built code, ran the suite (157 green) and the API smoke test
+against a real server, and passed all four. David merges. Item 5 waits on his Strong export. Item 6 waits on
+the session screen spec.
+
+Three follow-ups came out of that review, all server lane and all small.
+
+8. **The cap as a field, amendment A5.** `Prescription.constraint_max_weight_kg`, the folded cap, populated in
+   stage D, stored on the `workout_exercises` row and served. Amendment A4 left the cap as the only number
+   David gets for a constrained exercise and it lived only inside the rationale prose, so no client could
+   render it without parsing English. Flint raised it on PR 4.
+9. **Stop the interim PWA pre-filling the effort chip, and send `rir_observed`.** Two changes that belong
+   together. `defaultDraft` in `apps/web/src/lib/session.ts` sets `rir: we.target_rir`, so the chip shows an
+   answer David never gave. `ChipRow` already renders a null value as nothing selected, so removing the
+   pre-fill needs no new component. Then send `rir_observed` explicitly on create and patch, true when a value
+   was picked. The consequence, stated rather than hidden: a set logged with no effort tapped records a null
+   RIR, which makes the session non-qualifying rather than qualifying with the load held. That discards more
+   than marking it assumed would, and it is the honest reading of David's ruling that an untouched slider tells
+   the app nothing. `RirNudge` shows an em dash for a null value, which the house style rules out.
+10. **House style in the seed data.** The three routine names, the mesocycle name and at least one exercise cue
+    carry em dashes, and David reads all of them in the app. `packages/core/src/seed/templates.ts`,
+    `mesocycle.ts` and `exercises.ts`.
+
 ## Carried from the design review
 
 - Client: the three exercise-management flows (library, add mid-session, edit routine), where the API already
@@ -81,7 +106,10 @@ the whole client build and it is governed by `docs/PAGES.md`, not by this list.
 
 ## Branch and PR conventions
 
-- Branch `lane/<client or server>/<issue>-<slug>`, base `main`, squash-merge, CI green required.
+- Branch `lane/<client or server>/<issue>-<slug>`, squash-merge, CI green required.
+- **Base is `claude/training-app-mvp-eymz5h`, not `main`.** There is no `main` in this repository and
+  `origin/HEAD` points at the branch above. Flint caught this on 9 September. David decides whether a `main`
+  ever gets created, and until he does, that branch is the trunk.
 - PR template `.github/pull_request_template.md`.
 - Commits use an imperative subject, and the body lists behaviour changes. No model names in commits or code.
 - Run `git config core.hooksPath tools/hooks` in every checkout. The secrets hook lives there.

@@ -29,12 +29,17 @@ pnpm --filter @omega/core build           # apps import core's built output, so 
 pnpm -r typecheck && pnpm -r test         # expect 133 green
 ```
 
-Two worktrees, one per lane, so a half-finished screen and a database migration never share a folder:
+Two worktrees, one per lane, so a half-finished screen and a database migration never share a folder. Each one
+gets its own new lane branch, because git refuses to check the same branch out twice and the main checkout
+already holds the trunk:
 
 ```bash
-git worktree add ../omega-server claude/training-app-mvp-eymz5h
-git worktree add ../omega-client claude/training-app-mvp-eymz5h
+git worktree add -b lane/server/<slug> ../omega-server claude/training-app-mvp-eymz5h
+git worktree add -b lane/client/<slug> ../omega-client claude/training-app-mvp-eymz5h
 ```
+
+The trunk is `claude/training-app-mvp-eymz5h`. There is no `main` in this repository, so base every pull
+request on the trunk.
 
 Join the channel. Full instructions are in `docs/agent-bridge.md`, which is a copy of David's own doc kept
 here because you may not have his `D:` drive.
