@@ -46,10 +46,16 @@ export interface PrescribeResult {
 /** A working "unit": one bilateral set, or one left/right pair for a unilateral exercise. */
 export interface WorkUnit {
   set_index: number;
-  reps: number;            // pair → min(left, right)
-  rir: number | null;      // effective (AMRAP → 0); pair → mean of sides
+  reps: number;            // pair: min(left, right)
+  rir: number | null;      // effective (AMRAP is 0); pair: mean of sides
   is_amrap: boolean;
-  weight_kg: number;       // pair → max of sides (should be equal)
+  /**
+   * Did a human assert this unit's RIR? An AMRAP set is observed by definition (it was taken to
+   * failure). A pair counts as observed only when both sides are, since the unit's RIR is their mean
+   * and one assumed side makes the mean an assumption. See "The effort test" in docs/ENGINE-RULES.md.
+   */
+  rir_observed: boolean;
+  weight_kg: number;       // pair: max of sides (should be equal)
   set_ids: string[];
 }
 
@@ -62,7 +68,8 @@ export interface SessionAnalysis {
   non_qualifying_reason: 'not_completed' | 'workout_compromised' | 'exercise_compromised' | 'pain' | 'no_rir' | null;
   weight_kg: number | null;      // modal working weight (ties → heavier)
   reps: number[];                // per unit
-  mean_rir: number | null;       // over NON-AMRAP units with a known RIR; null if none
+  mean_rir: number | null;       // over NON-AMRAP units with an OBSERVED RIR; null if none
+  non_amrap_units: number;       // count of NON-AMRAP units, observed or not
   all_at_or_above_high: boolean; // vs the session's OWN target_rep_high
   any_below_low: boolean;        // vs the session's OWN target_rep_low
   best_e1rm: number | null;
@@ -85,10 +92,21 @@ export function setRir(s: Pick<SetLog, 'rir' | 'is_amrap'>): number | null {
   return s.rir;
 }
 
+/**
+ * Did a human assert this set's RIR? An AMRAP set is an observation whatever the field says, because
+ * it was taken to failure. Otherwise the field decides, and an absent field means observed: rows
+ * written before `rir_observed` existed carry a real recorded RIR, and reading them as assumptions
+ * would retroactively freeze progression on real history.
+ */
+export function setRirObserved(s: Pick<SetLog, 'is_amrap' | 'rir_observed'>): boolean {
+  if (s.is_amrap) return true;
+  return s.rir_observed ?? true;
+}
+
 export function toWorkUnits(sets: readonly SetLog[], isUnilateral: boolean): WorkUnit[] {
   const working = sets.filter((s) => !s.is_warmup).sort((a, b) => a.set_index - b.set_index || sideOrder(a.side) - sideOrder(b.side));
   if (!isUnilateral) {
-    return working.map((s) => ({ set_index: s.set_index, reps: s.reps, rir: setRir(s), is_amrap: s.is_amrap, weight_kg: s.weight_kg, set_ids: [s.id] }));
+    return working.map((s) => ({ set_index: s.set_index, reps: s.reps, rir: setRir(s), is_amrap: s.is_amrap, rir_observed: setRirObserved(s), weight_kg: s.weight_kg, set_ids: [s.id] }));
   }
   const groups = new Map<number, SetLog[]>();
   for (const s of working) groups.set(s.set_index, [...(groups.get(s.set_index) ?? []), s]);
@@ -99,6 +117,7 @@ export function toWorkUnits(sets: readonly SetLog[], isUnilateral: boolean): Wor
       reps: Math.min(...ss.map((s) => s.reps)),
       rir: rirs.length ? rirs.reduce((a, b) => a + b, 0) / rirs.length : null,
       is_amrap: ss.some((s) => s.is_amrap),
+      rir_observed: ss.every(setRirObserved),
       weight_kg: Math.max(...ss.map((s) => s.weight_kg)),
       set_ids: ss.map((s) => s.id),
     };
@@ -117,7 +136,8 @@ export function analyzeSession(record: ExerciseSessionRecord, isUnilateral: bool
   else if (pain) non_qualifying_reason = 'pain';
   else if (record.workout_exercise.is_compromised) non_qualifying_reason = 'exercise_compromised';
   else if (knownRir.length === 0) non_qualifying_reason = 'no_rir';
-  const nonAmrap = units.filter((u) => !u.is_amrap && u.rir !== null);
+  const nonAmrapUnits = units.filter((u) => !u.is_amrap);
+  const nonAmrapObserved = nonAmrapUnits.filter((u) => u.rir !== null && u.rir_observed);
   const te = record.workout_exercise;
   let best_e1rm: number | null = null;
   for (const s of working_sets) {
@@ -135,7 +155,8 @@ export function analyzeSession(record: ExerciseSessionRecord, isUnilateral: bool
     non_qualifying_reason,
     weight_kg: modeWeight(units),
     reps: units.map((u) => u.reps),
-    mean_rir: nonAmrap.length ? nonAmrap.reduce((a, u) => a + (u.rir as number), 0) / nonAmrap.length : null,
+    mean_rir: nonAmrapObserved.length ? nonAmrapObserved.reduce((a, u) => a + (u.rir as number), 0) / nonAmrapObserved.length : null,
+    non_amrap_units: nonAmrapUnits.length,
     all_at_or_above_high: units.length > 0 && units.every((u) => u.reps >= te.target_rep_high),
     any_below_low: units.some((u) => u.reps < te.target_rep_low),
     best_e1rm,
@@ -157,7 +178,7 @@ export function floorToIncrement(weight: number, increment: number): number {
 }
 
 function fmtReps(reps: readonly number[]): string { return reps.join(', '); }
-function fmtKg(w: number | null): string { return w === null ? '—' : `${w} kg`; }
+function fmtKg(w: number | null): string { return w === null ? 'no weight set' : `${w} kg`; }
 function fmtRir(r: number | null): string { return r === null ? '—' : (Math.round(r * 10) / 10).toString(); }
 
 /** Spec §5.4 — best qualifying e1RM in the rolling window, with provenance. */
@@ -195,8 +216,8 @@ export function derivedStalls(doneNewestFirst: readonly SessionAnalysis[]): numb
 //   C  load decision, first match wins:
 //        C1 no L → first_time (starting load if any)
 //        C2 deload → repeat L.weight, no progression
-//        C3 all ≥ L.rep_high & mean RIR ≥ L.target_rir → progress_load (+increment; 0-increment → progress_reps + unloadable)
-//        C4 all ≥ L.rep_high & mean RIR < target → consolidate
+//        C3 all >= L.rep_high AND the effort test passes: progress_load (+increment, 0-increment gives progress_reps + unloadable)
+//        C4 all >= L.rep_high and it does not: consolidate, and say why when effort was never reported (A2)
 //        C5 any < L.rep_low in L AND in L' → regress_load (−10%, stalls+1)
 //        C6 otherwise → progress_reps (+1 per unit, capped at T.rep_high)
 //        C7 M ≠ L (most recent done session non-qualifying) → relabel repeat_after_compromised, stalls untouched
@@ -244,8 +265,12 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
   let progressedToday = false;
   let omit = false;
 
-  const describe = (a: SessionAnalysis) =>
-    `Last qualifying session ${a.record.workout.date}: ${fmtKg(a.weight_kg)} × ${fmtReps(a.reps)} at mean RIR ${fmtRir(a.mean_rir)} (target ${a.record.workout_exercise.target_rir}, range ${a.record.workout_exercise.target_rep_low}–${a.record.workout_exercise.target_rep_high}).`;
+  const describe = (a: SessionAnalysis) => {
+    const effort = a.mean_rir === null
+      ? 'with no effort reported'
+      : `at effort ${fmtRir(a.mean_rir)}`;
+    return `Last qualifying session ${a.record.workout.date}: ${fmtKg(a.weight_kg)} for ${fmtReps(a.reps)} reps ${effort} (target ${a.record.workout_exercise.target_rir}, range ${a.record.workout_exercise.target_rep_low} to ${a.record.workout_exercise.target_rep_high}).`;
+  };
   const rangeNote = (a: SessionAnalysis) =>
     (a.record.workout_exercise.target_rep_low !== template.rep_low || a.record.workout_exercise.target_rep_high !== template.rep_high)
       ? ` Today's range is ${template.rep_low}–${template.rep_high}.` : '';
@@ -258,7 +283,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
   } else if (env.awaiting_clearance) {
     // --- A2
     reason = 'requires_clearance';
-    rationale = 'Held pending physio clearance: no load prescribed until the constraint is cleared. Sets may still be logged.';
+    rationale = 'Held pending physio clearance. No load is prescribed until the constraint is cleared, and sets may still be logged.';
   } else if (!L) {
     // --- C1
     reason = 'first_time';
@@ -270,7 +295,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
       suggested = fallback;
       rationale = `No qualifying history yet. Repeating the {{W}} used on ${M!.record.workout.date}.`;
     } else {
-      rationale = 'No qualifying history yet — set a starting load.';
+      rationale = 'No qualifying history yet. Set a starting load.';
     }
     if (M && !M.qualifying) rationale += ` (Most recent session ${M.record.workout.date} did not qualify: ${M.non_qualifying_reason}.)`;
   } else if (week?.is_deload) {
@@ -280,15 +305,24 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
     rationale = `Deload week ${week.week_number}: repeating the last working weight {{W}} at reduced volume (${target_sets} sets), RIR ${target_rir}. No progression evaluated.`;
   } else {
     const wL = L.weight_kg ?? 0;
-    const rirOk = L.mean_rir === null || L.mean_rir >= L.record.workout_exercise.target_rir;
-    if (L.all_at_or_above_high && rirOk) {
+    // The effort test (docs/ENGINE-RULES.md, amendment A1). Load may only go up on evidence that the
+    // set was easy, never on a client's pre-filled default. It passes when at least one non-AMRAP unit
+    // had its effort observed and the mean over those units is at or above the session's target, or
+    // when there were no non-AMRAP units at all, since a set taken to failure is itself the evidence.
+    const observedMean = L.mean_rir;
+    const effortTestPasses = L.non_amrap_units === 0
+      || (observedMean !== null && observedMean >= L.record.workout_exercise.target_rir);
+    // Reps alone would have earned the load, and only the missing effort report is holding it back.
+    // A2: that hold has to say so, otherwise the fix trades one silent failure for another.
+    const withheldForEffort = L.all_at_or_above_high && !effortTestPasses && observedMean === null;
+    if (L.all_at_or_above_high && effortTestPasses) {
       // --- C3
       if (incr > 0) {
         reason = 'progress_load';
         suggested = Math.round((wL + incr) * 1000) / 1000;
         progressedToday = true;
         stalls = 0;
-        rationale = `${describe(L)} Every set reached the top of the range with effort in hand → +${incr} kg to {{W}}, reset to ${template.rep_low} reps.${rangeNote(L)}`;
+        rationale = `${describe(L)} Every set reached the top of the range with effort in hand, so add ${incr} kg to make {{W}} and reset to ${template.rep_low} reps.${rangeNote(L)}`;
       } else {
         reason = 'progress_reps';
         suggested = wL;
@@ -297,13 +331,16 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
         byset = byset.slice(0, target_sets);   // L may have run more sets than today prescribes
         rep_high = Math.max(rep_high, ...byset);
         flags.push('unloadable');
-        rationale = `${describe(L)} Every set reached the top of the range but this exercise has no load increment → add a rep per set (${fmtReps(byset)}).`;
+        rationale = `${describe(L)} Every set reached the top of the range but this exercise has no load increment, so add a rep per set (${fmtReps(byset)}).`;
       }
     } else if (L.all_at_or_above_high) {
-      // --- C4
+      // --- C4, reached either because the effort reported was under target, or (A2) because no
+      // effort was reported at all and the engine will not add load on an assumption.
       reason = 'consolidate';
       suggested = wL;
-      rationale = `${describe(L)} Reps are there but mean RIR ${fmtRir(L.mean_rir)} is under the target ${L.record.workout_exercise.target_rir} → hold {{W}} and the same reps until effort drops.${rangeNote(L)}`;
+      rationale = withheldForEffort
+        ? `${describe(L)} Every set reached the top of the range, so the weight is ready to go up. I am holding {{W}} until you tell me how hard a set was.${rangeNote(L)}`
+        : `${describe(L)} Reps are there but effort ${fmtRir(L.mean_rir)} is under the target ${L.record.workout_exercise.target_rir}, so hold {{W}} and the same reps until it drops.${rangeNote(L)}`;
     } else if (L.any_below_low && L2 && L2.any_below_low) {
       // --- C5
       reason = 'regress_load';
@@ -311,7 +348,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
       if (w >= wL && incr > 0) w = roundToIncrement(wL - incr, incr);
       suggested = Math.max(0, w);
       stalls = prevStalls + 1;
-      rationale = `${describe(L)} Sets fell below the bottom of the range in two consecutive qualifying sessions (${L2.record.workout.date}: ${fmtReps(L2.reps)}) → reduce ~10% to {{W}} and rebuild from ${template.rep_low} reps.`;
+      rationale = `${describe(L)} Sets fell below the bottom of the range in two consecutive qualifying sessions (${L2.record.workout.date}: ${fmtReps(L2.reps)}), so drop about 10% to {{W}} and rebuild from ${template.rep_low} reps.`;
       if (suggested === 0 && wL === 0) rationale += ' Already at bodyweight.';
     } else {
       // --- C6
@@ -320,8 +357,8 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
       byset = L.reps.map((r) => Math.min(r + 1, template.rep_high));
       while (byset.length < target_sets) byset.push(template.rep_low);
       byset = byset.slice(0, target_sets);     // L may have run more sets than today prescribes
-      rationale = `${describe(L)} Not every set reached the top of the range → hold {{W}} and target one more rep per set (${fmtReps(byset)}).${rangeNote(L)}`;
-      if (L.any_below_low) rationale += ` A set fell below ${L.record.workout_exercise.target_rep_low}; a second consecutive miss will trigger a load reduction.`;
+      rationale = `${describe(L)} Not every set reached the top of the range, so hold {{W}} and target one more rep per set (${fmtReps(byset)}).${rangeNote(L)}`;
+      if (L.any_below_low) rationale += ` A set fell below ${L.record.workout_exercise.target_rep_low}. A second consecutive miss will trigger a load reduction.`;
     }
     // --- C7
     if (M && M !== L) {
@@ -358,7 +395,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
   if (reason === 'regress_load') rationale += ` Stall count ${stalls}.`;
   if (stalls >= STALL_REVIEW_THRESHOLD) {
     flags.push('stall_review');
-    rationale += ` ${stalls} consecutive stalls — review this exercise (substitution or volume).`;
+    rationale += ` ${stalls} consecutive stalls, so this exercise is worth reviewing (substitution or volume).`;
   }
 
   rationale = rationale.split('{{W}}').join(fmtKg(suggested));

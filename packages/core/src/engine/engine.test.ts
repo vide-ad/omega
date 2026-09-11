@@ -148,6 +148,8 @@ describe('volume §4', () => {
     expect(isHardSet({ is_warmup: false, rir: null, is_amrap: false })).toBe(true);
     expect(isHardSet({ is_warmup: false, rir: 6, is_amrap: true })).toBe(true);
     expect(isHardSet({ is_warmup: true, rir: 0, is_amrap: false })).toBe(false);
+    // An assumed RIR still counts for volume. The effort test only governs adding load (A1).
+    expect(isHardSet(mkSet({ reps: 10, weight_kg: 40, rir: 3, rir_observed: false }))).toBe(true);
   });
   it('unilateral pairs by set_index count as one set', () => {
     const sets = [
@@ -203,7 +205,7 @@ describe('progression §5.5', () => {
   const template = { base_sets: 3, is_priority: false, rep_low: 8, rep_high: 10, rir_target: 2, last_set_amrap: false };
   const week = (o: Partial<MesocycleWeek> = {}): MesocycleWeek => ({ mesocycle_id: 'm', week_number: 2, is_deload: false, set_delta: 1, rir_target_low: 2, rir_target_high: 2, volume_multiplier: 1, ...o });
 
-  interface SessOpts { rir?: (number | null)[]; compromised?: boolean; exerciseCompromised?: boolean; pain?: boolean; target_rir?: number; range?: [number, number]; reason?: ExerciseSessionRecord['workout_exercise']['reason']; completed?: boolean; amrapLast?: boolean }
+  interface SessOpts { rir?: (number | null)[]; rirObserved?: (boolean | undefined)[]; compromised?: boolean; exerciseCompromised?: boolean; pain?: boolean; target_rir?: number; range?: [number, number]; reason?: ExerciseSessionRecord['workout_exercise']['reason']; completed?: boolean; amrapLast?: boolean }
   function session(date: string, weight: number, reps: number[], o: SessOpts = {}): ExerciseSessionRecord {
     return {
       workout: { id: `w-${date}`, date, is_compromised: o.compromised ?? false, completed_at: (o.completed ?? true) ? `${date}T11:00:00.000Z` : null },
@@ -213,6 +215,7 @@ describe('progression §5.5', () => {
       },
       sets: reps.map((r, i) => mkSet({
         reps: r, weight_kg: weight, set_index: i + 1, rir: o.rir ? o.rir[i]! : 2, is_amrap: !!o.amrapLast && i === reps.length - 1,
+        ...(o.rirObserved ? { rir_observed: o.rirObserved[i] } : {}),
         pain_severity: o.pain && i === 0 ? 'moderate' : 'none', completed_at: `${date}T10:00:00.000Z`,
       })),
     };
@@ -277,6 +280,108 @@ describe('progression §5.5', () => {
     expect(short.prescription.reason).toBe('progress_reps'); // AMRAP reps below rep_high
     const onlyAmrap = prescribe({ ...base, history: [session('2026-09-12', 42.5, [12], { rir: [0], amrapLast: true })] });
     expect(onlyAmrap.prescription.reason).toBe('progress_load'); // no non-AMRAP sets → RIR condition satisfied
+  });
+
+  // --- The effort test (docs/ENGINE-RULES.md, amendments A1 and A2) ------------------------------
+  // The four rows of the table in docs/DESIGN-REVIEW.md §1, run against the engine. Target effort 3,
+  // every set at the top of the range. Before A1 the first row returned progress_load at 45 kg, which
+  // made an untouched pre-fill indistinguishable from a report that the set was easy.
+  describe('the effort test', () => {
+    const top = [10, 10, 10];
+
+    it('row 1: an untouched pre-fill of 3 holds the weight and says what would unlock it', () => {
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, top, { rir: [3, 3, 3], rirObserved: [false, false, false], target_rir: 3 })] });
+      expect(r.prescription.reason).toBe('consolidate');
+      expect(r.prescription.suggested_weight_kg).toBe(42.5);
+      // A2: the hold has to explain itself and name what unlocks it.
+      expect(r.prescription.rationale).toContain('holding 42.5 kg');
+      expect(r.prescription.rationale).toMatch(/how hard/i);
+      // It is a hold, not an error and not a nag.
+      expect(r.prescription.flags).not.toContain('stall_review');
+      expect(r.next_state.consecutive_stalls).toBe(0);
+      // The session still qualified. Assumed effort is ignored for load, not for history.
+      expect(r.prescription.based_on_workout_id).toBe('w-2026-09-12');
+    });
+
+    it('row 2: a reported 2, harder than asked, consolidates on the effort actually reported', () => {
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, top, { rir: [2, 2, 2], target_rir: 3 })] });
+      expect(r.prescription.reason).toBe('consolidate');
+      expect(r.prescription.suggested_weight_kg).toBe(42.5);
+      expect(r.prescription.rationale).toContain('under the target 3');
+      expect(r.prescription.rationale).not.toMatch(/how hard/i);
+    });
+
+    it('row 3: a reported 4, easier than asked, still adds load', () => {
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, top, { rir: [4, 4, 4], target_rir: 3 })] });
+      expect(r.prescription.reason).toBe('progress_load');
+      expect(r.prescription.suggested_weight_kg).toBe(45);
+    });
+
+    it('row 4: no effort recorded at all leaves the session non-qualifying', () => {
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, top, { rir: [null, null, null], target_rir: 3 })] });
+      expect(r.prescription.reason).toBe('first_time');
+      expect(r.prescription.suggested_weight_kg).toBe(42.5);
+    });
+
+    it('one observed unit is enough, and the mean is taken over the observed units only', () => {
+      // Two assumed 3s and one reported 4. Mean over observed is 4, which clears the target of 3.
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, top, { rir: [3, 3, 4], rirObserved: [false, false, true], target_rir: 3 })] });
+      expect(r.prescription.reason).toBe('progress_load');
+      expect(r.prescription.suggested_weight_kg).toBe(45);
+      // The reported set was hard, so the observed mean is 2 even though the assumed sets said 3.
+      const hard = prescribe({ ...base, history: [session('2026-09-12', 42.5, top, { rir: [3, 3, 2], rirObserved: [false, false, true], target_rir: 3 })] });
+      expect(hard.prescription.reason).toBe('consolidate');
+      expect(hard.prescription.rationale).toContain('under the target 3');
+    });
+
+    it('an AMRAP set is an observation whatever the client sent', () => {
+      // Taken to failure and still at the top of the range, with no non-AMRAP unit to report on.
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, [12], { rir: [0], rirObserved: [false], amrapLast: true, target_rir: 3 })] });
+      expect(r.prescription.reason).toBe('progress_load');
+      expect(r.prescription.suggested_weight_kg).toBe(45);
+    });
+
+    it('an absent rir_observed reads as observed, so existing rows keep progressing', () => {
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, top, { rir: [3, 3, 3], rirObserved: [undefined, undefined, undefined], target_rir: 3 })] });
+      expect(r.prescription.reason).toBe('progress_load');
+      expect(r.prescription.suggested_weight_kg).toBe(45);
+    });
+
+    it('assumed effort still buys rep progression, just not load', () => {
+      const r = prescribe({ ...base, history: [session('2026-09-12', 42.5, [10, 9, 8], { rir: [3, 3, 3], rirObserved: [false, false, false], target_rir: 3 })] });
+      expect(r.prescription.reason).toBe('progress_reps');
+      expect(r.prescription.suggested_weight_kg).toBe(42.5);
+      expect(r.prescription.target_reps_by_set).toEqual([10, 10, 9]);
+    });
+
+    it('a unilateral pair counts as observed only when both sides are', () => {
+      const uni = { ...exercise, id: 'bss', is_unilateral: true };
+      const pair = (leftObserved: boolean, rightObserved: boolean): ExerciseSessionRecord => ({
+        workout: { id: 'w1', date: '2026-09-12', is_compromised: false, completed_at: '2026-09-12T11:00:00.000Z' },
+        workout_exercise: { id: 'we1', target_rep_low: 8, target_rep_high: 10, target_rir: 3, target_sets: 2, suggested_weight_kg: 10, reason: null, is_compromised: false },
+        sets: [
+          mkSet({ reps: 10, weight_kg: 10, side: 'left', set_index: 1, rir: 3, rir_observed: leftObserved }),
+          mkSet({ reps: 10, weight_kg: 10, side: 'right', set_index: 1, rir: 3, rir_observed: rightObserved }),
+        ],
+      });
+      expect(toWorkUnits(pair(true, true).sets, true)[0]!.rir_observed).toBe(true);
+      expect(toWorkUnits(pair(true, false).sets, true)[0]!.rir_observed).toBe(false);
+      expect(prescribe({ ...base, exercise: uni, history: [pair(true, true)] }).prescription.reason).toBe('progress_load');
+      const half = prescribe({ ...base, exercise: uni, history: [pair(true, false)] });
+      expect(half.prescription.reason).toBe('consolidate');
+      expect(half.prescription.rationale).toMatch(/how hard/i);
+    });
+
+    it('a withheld progression never reads as a stall or a regression', () => {
+      const hist = [
+        session('2026-09-08', 42.5, top, { rir: [3, 3, 3], rirObserved: [false, false, false], target_rir: 3, reason: 'consolidate' }),
+        session('2026-09-12', 42.5, top, { rir: [3, 3, 3], rirObserved: [false, false, false], target_rir: 3, reason: 'consolidate' }),
+      ];
+      const r = prescribe({ ...base, history: hist });
+      expect(r.prescription.reason).toBe('consolidate');
+      expect(r.next_state.consecutive_stalls).toBe(0);
+      expect(r.prescription.flags).toEqual([]);
+    });
   });
 
   it('progress_reps when some sets below rep_high: +1 per set, capped at rep_high, extra sets at rep_low', () => {
