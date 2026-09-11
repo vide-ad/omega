@@ -31,10 +31,27 @@ The screen you hold between sets. Shows each exercise with what the engine sugge
 last time, and a row per set to log weight, reps, effort and pain. Auto-starts the rest timer when you log a set.
 Reads `GET /workouts/:id`. Writes `POST /workouts/:id/sets`, `PATCH /sets/:id`, `DELETE /sets/:id`,
 `PATCH /workouts/:id` to finish.
-Decisions already made that bind this page: the effort slider must show whether a value is yours or the engine's
-guess, and say what unlocks a held progression (`docs/ENGINE-RULES.md`, amendments A1 and A2). Colour has one
-owner each (`docs/DESIGN-REVIEW.md`). One exercise open at a time, because the version chalk built ran to eight
-phone screens. The "today was rough" toggle lives here now, not on a separate readiness page.
+Decisions already made that bind this page.
+
+- **The effort chips are the button that logs a working set.** David ruled on 11 September. You type the reps
+  and tap how many you had left, and that one tap both records the effort and completes the set. There is no
+  separate tick on a working set, so there is nothing to skip past. Warmups and AMRAP sets keep a plain tick,
+  because effort is meaningless on a warmup and an AMRAP set is effort zero by definition. A small "no answer"
+  option stays for when he genuinely will not say.
+- **The question is reps left in the tank, not how hard out of ten.** David ruled on 11 September. Chips 0 to 5,
+  where 0 means nothing left. This matches what the engine already stores, so nothing converts.
+- **The evidence behind both.** His Strong export carries three effort values in 14,372 sets over nine years,
+  and both attempts died inside a single session. Strong could always record effort alongside reps, so the
+  failure was not capability, it was that answering cost a separate action. See `docs/STRONG-IMPORT.md`. Any
+  design that makes effort a thing you do *as well as* logging the set has already been tested on this user and
+  it lost. Effort is the single input the whole progression engine turns on, so this page either solves it or
+  the app does not work.
+- The effort control must still show whether a value is his or the engine's guess, and say what unlocks a held
+  progression (`docs/ENGINE-RULES.md`, amendments A1 and A2). Under the ruling above an assumed value should
+  now be rare, because the only way to log a working set is to answer.
+- Colour has one owner each (`docs/DESIGN-REVIEW.md`).
+- One exercise open at a time, because the version chalk built ran to eight phone screens.
+- The "today was rough" toggle lives here now, not on a separate readiness page.
 
 **2. Today.** Not started.
 The landing screen. What block and week you are in, which routines you can start, and a resume card if a session
@@ -109,7 +126,8 @@ needs a connection, because the prescription comes from the server.
 **Rest timer.** Starts itself when you log a set. Must survive the screen locking, so it works from an end
 timestamp rather than counting down in memory.
 
-**Effort entry.** One tap, and it must distinguish your answer from the engine's guess. See amendments A1 and A2.
+**Effort entry.** One tap, and that tap is what logs the set. See page 1 for the ruling and the evidence, and
+amendments A1 and A2 for why an assumed value cannot add weight to the bar.
 
 **Pain flag.** One tap, four states, with an optional note. This is the only alarm colour in the app.
 

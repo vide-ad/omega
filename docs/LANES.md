@@ -84,14 +84,14 @@ Three follow-ups came out of that review, all server lane and all small.
    stage D, stored on the `workout_exercises` row and served. Amendment A4 left the cap as the only number
    David gets for a constrained exercise and it lived only inside the rationale prose, so no client could
    render it without parsing English. Flint raised it on PR 4.
-9. **Stop the interim PWA pre-filling the effort chip, and send `rir_observed`.** Two changes that belong
-   together. `defaultDraft` in `apps/web/src/lib/session.ts` sets `rir: we.target_rir`, so the chip shows an
-   answer David never gave. `ChipRow` already renders a null value as nothing selected, so removing the
-   pre-fill needs no new component. Then send `rir_observed` explicitly on create and patch, true when a value
-   was picked. The consequence, stated rather than hidden: a set logged with no effort tapped records a null
-   RIR, which makes the session non-qualifying rather than qualifying with the load held. That discards more
-   than marking it assumed would, and it is the honest reading of David's ruling that an untouched slider tells
-   the app nothing. `RirNudge` shows an em dash for a null value, which the house style rules out.
+9. **Make the effort chip log the set, in the interim PWA.** Rewritten on 11 September after David ruled on
+   page one, and it is now simpler than the version chalk first wrote. Remove the pre-fill in `defaultDraft`,
+   and make `RirChips.onChange` commit the set rather than only setting a value. `ChipRow` already renders a
+   null value as nothing selected and `SetRow` already has the submit handler, so this is a small change.
+   The tick stays for warmups and AMRAP sets. Guard the commit on the row validating, so a chip tapped before
+   the reps are typed sets the value without logging. `rir_observed` is then always true, because the only way
+   to log a working set is to answer. `RirNudge` shows an em dash for a null value, which the house style
+   rules out.
 10. **House style in the seed data.** The three routine names, the mesocycle name and at least one exercise cue
     carry em dashes, and David reads all of them in the app. `packages/core/src/seed/templates.ts`,
     `mesocycle.ts` and `exercises.ts`.
