@@ -59,8 +59,9 @@ first, for wren's reason. It is the only item here that protects data from being
 3. `DELETE /workouts/:id/exercises/:weid`, small, known, missing. Server lane.
 4. `rir_observed` column and migration (existing non-null `rir` becomes observed), accepted on set writes, forced
    true with `rir = 0` for AMRAP. Server lane.
-5. Strong CSV importer as a CLI with `--units` and `--dry-run`. The spec follows once David sends a sample.
-   Server lane.
+5. Strong CSV importer as a CLI with `--dry-run`. David sent the real export on 11 September and the spec is
+   `docs/STRONG-IMPORT.md`. There is no `--units` flag, because the file is already all kilograms and the
+   analysis explains why a whole-file flag would double-convert half of it. Server lane.
 6. **Then Flutter, page by page.** The running list is `docs/PAGES.md` and it starts with the session screen.
    Each page gets a spec in `docs/pages/` that has passed a code-reality check before it is build-ready. One
    page in flight at a time. Client lane.
@@ -74,8 +75,8 @@ the whole client build and it is governed by `docs/PAGES.md`, not by this list.
 
 Flint built items 1 to 4 in a stack of four pull requests, 2, 4, 6 and 8, all green on Ubuntu and Windows.
 Chalk reviewed them on 9 September against the built code, ran the suite (157 green) and the API smoke test
-against a real server, and passed all four. David merges. Item 5 waits on his Strong export. Item 6 waits on
-the session screen spec.
+against a real server, and passed all four. David merges. Item 5 is now specified in `docs/STRONG-IMPORT.md`.
+Item 6 waits on the session screen spec.
 
 Three follow-ups came out of that review, all server lane and all small.
 

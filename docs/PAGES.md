@@ -126,7 +126,8 @@ toward volume, not two.
 **Server queue.** Items 1 to 5 in `docs/LANES.md`, which are flint's now. Specified, and they run in parallel
 with us writing page specs.
 
-**Strong import.** Waiting on your sample export. Server side, a command line tool rather than a page.
+**Strong import.** Specified in `docs/STRONG-IMPORT.md` against David's real export. Server side, a command
+line tool rather than a page.
 
 **Apple Health cardio.** An Apple Shortcut posting to `POST /cardio` on the interim app. Flutter can read
 HealthKit directly, which is a reason it exists, but it is not a page and it is not early.
