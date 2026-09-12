@@ -1,5 +1,14 @@
 # How a programme gets into Omega
 
+**PARKED by David on 12 September 2026. Do not build against this page.** He knows what he wants and is
+still working out how it should sit in a database. Nothing on this page is decided, including chalk's
+recommendation below, and nobody should treat it as a spec until he unparks it.
+
+**Parking it blocks nothing.** Flint's queue (issues 9, 11, 12 and the Strong importer) does not touch it.
+Amendment A6, prescribed ramps, is safe to build because it changes what a template can express and that
+is true wherever templates come from. Pages 1, 2 and 3 render whatever a programme produces and do not
+care how it was authored. The only thing this holds up is coach write access, which was gated anyway.
+
 David set this out on 12 September 2026, and it reframes what the app is for. Recording it because the
 original spec described a training log with a progression engine bolted on, and that is not the product.
 

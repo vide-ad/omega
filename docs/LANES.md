@@ -97,6 +97,12 @@ Three follow-ups came out of that review, all server lane and all small.
     happen. See `docs/STRONG-IMPORT.md`. Do this in the same pull request as the importer, not before, so
     nothing is left with no starting weight at all.
 
+## Parked
+
+**`docs/PROGRAMME.md`**, the AI-designed programme and the coach write loop. David parked it on
+12 September while he thinks through the data model. It blocks nothing in the queue above. Do not build
+against it and do not treat chalk's recommendation in it as settled.
+
 ## Carried from the design review
 
 - Client, now all against Flutter rather than the frozen PWA: the three exercise-management flows (library,
