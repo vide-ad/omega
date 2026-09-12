@@ -13,3 +13,6 @@ coverage/
 .DS_Store
 .vite/
 .turbo/
+
+# David's own Strong export, kept out of the repo. Nine years of personal training history.
+strong_workouts*.csv

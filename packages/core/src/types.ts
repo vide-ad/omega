@@ -198,6 +198,8 @@ export interface WorkoutExercise {
   // --- Stored prescription (engine output at instantiation; immutable history) ---
   target_reps_by_set: number[] | null;  // per-set rep targets when reason is progress_reps
   target_tempo: string | null;          // from an applicable constraint's required_tempo
+  /** The physio's cap, folded across every applicable constraint (A5). Null when none sets one. */
+  constraint_max_weight_kg: number | null;
   last_set_amrap: boolean;
   reason: PrescriptionReason | null;    // null for ad-hoc exercises with no engine run
   rationale: string | null;
@@ -348,6 +350,12 @@ export interface Prescription {
   /** Per-set rep targets when the rule is `progress_reps` (spec §5.5: one more rep than achieved, per set). */
   target_reps_by_set: number[] | null;
   target_tempo: string | null;
+  /**
+   * The physio's cap as a number, the lowest across every constraint that applies, null when none sets
+   * one. Amendment A5. A constrained exercise gets no suggested weight (A4), so this is the only number
+   * David gets for it, and it has to exist somewhere a client can render without parsing prose.
+   */
+  constraint_max_weight_kg: number | null;
   last_set_amrap: boolean;
   reason: PrescriptionReason;
   rationale: string;

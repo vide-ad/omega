@@ -34,6 +34,7 @@ export function rowToWorkoutExercise(r: Row): WorkoutExercise {
     notes: strOrNull(r.notes),
     target_reps_by_set: jsonOrNull<number[]>(r.target_reps_by_set),
     target_tempo: strOrNull(r.target_tempo),
+    constraint_max_weight_kg: numOrNull(r.constraint_max_weight_kg),
     last_set_amrap: bool(r.last_set_amrap),
     reason: strOrNull(r.reason) as PrescriptionReason | null,
     rationale: strOrNull(r.rationale),
@@ -56,6 +57,7 @@ export function prescriptionOf(we: WorkoutExercise): Prescription | null {
     target_rir: we.target_rir,
     target_reps_by_set: we.target_reps_by_set,
     target_tempo: we.target_tempo,
+    constraint_max_weight_kg: we.constraint_max_weight_kg,
     last_set_amrap: we.last_set_amrap,
     reason: we.reason,
     rationale: we.rationale ?? '',
@@ -89,7 +91,7 @@ export function rowToSet(r: Row): SetLog {
 
 const W_COL_NAMES = ['id', 'template_id', 'template_version', 'mesocycle_id', 'week_number', 'date', 'started_at', 'completed_at', 'readiness_id', 'session_rpe', 'notes', 'is_compromised'] as const;
 const WE_COL_NAMES = ['id', 'workout_id', 'exercise_id', 'order', 'target_sets', 'target_rep_low', 'target_rep_high', 'target_rir', 'suggested_weight_kg', 'rest_seconds', 'notes',
-  'target_reps_by_set', 'target_tempo', 'last_set_amrap', 'reason', 'rationale', 'flags', 'constraint_notes', 'based_on_workout_id', 'is_compromised'] as const;
+  'target_reps_by_set', 'target_tempo', 'constraint_max_weight_kg', 'last_set_amrap', 'reason', 'rationale', 'flags', 'constraint_notes', 'based_on_workout_id', 'is_compromised'] as const;
 const SET_COL_NAMES = ['id', 'workout_exercise_id', 'set_index', 'side', 'is_warmup', 'is_amrap', 'weight_kg', 'reps', 'rir', 'rir_observed', 'tempo', 'rest_taken_seconds', 'pain_severity', 'pain_note', 'media_id', 'completed_at'] as const;
 
 const q = (c: string) => (c === 'order' ? '"order"' : c);

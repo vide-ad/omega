@@ -20,6 +20,14 @@ Base path: `/api/v1`. JSON in and out. Types for every request/response live in
 - **Idempotent creates:** every `POST` that creates a row accepts a client-supplied UUID `id`. Re-posting the same
   `id` returns the existing row with `200` instead of creating a duplicate. This is what makes offline replay safe.
 - Every prescription object carries `reason` (machine) and `rationale` (human) plus `flags` and `constraint_notes`.
+- A constrained exercise gets no `suggested_weight_kg` at all (amendment A4), so `constraint_max_weight_kg`
+  carries the physio's cap as a number rather than only inside the rationale prose (amendment A5). It is the
+  lowest cap across every constraint that applies, and it is null when no constraint sets one. The rep floor is
+  already in `target_rep_low` and the tempo in `target_tempo`, so the cap was the only limit a client could not
+  render without parsing an English sentence.
+- `constrained` is both a reason and a flag, and they mean different things. The reason says why no weight was
+  prescribed. The flag says limits apply. A prescription with reason `requires_clearance` also carries the flag,
+  so do not render the two as one badge.
 
 ## Endpoints
 
@@ -118,8 +126,11 @@ The rulebook is `docs/ENGINE-RULES.md`. `POST /workouts` builds, per template ex
 It stores the prescription fields on the `workout_exercises` row and upserts `progression_state` with `next_state`.
 Stalls and baseline are derived from history by the engine; the API never feeds `progression_state` back except as the starting load.
 On write of a set with `is_amrap = true`, the API forces `rir = 0` and `rir_observed = true` (failure is an
-observation). `rir_observed` defaults to `true` when omitted, so importers and the coach are unaffected; the PWA
-must send `false` when its pre-filled RIR chip was never touched. See *The effort test* in `docs/ENGINE-RULES.md`
+observation). On `POST` a missing `rir_observed` means `true`, so importers and the coach are unaffected. On
+`PATCH` a missing `rir_observed` means unchanged, which is the trap: a patch that sets a new `rir` and omits
+`rir_observed` leaves a set that was recorded as an assumption still marked as one. Send both fields together
+whenever you change `rir`. The server cannot infer it, because a client that patches a whole row sends every
+field including one the user never touched. See *The effort test* in `docs/ENGINE-RULES.md`
 for why an assumed RIR cannot trigger `progress_load`. On unilateral exercises, `side` must be `left`/`right` and
 left/right sets of one pair share `set_index`; bilateral exercises use `side = 'bilateral'`.
 When a user logs a first working set at a weight different from the suggestion, nothing special happens: the next

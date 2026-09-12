@@ -17,6 +17,7 @@ export function rowFromPrescription(base: { id: string; workout_id: string; exer
     suggested_weight_kg: p.suggested_weight_kg,
     target_reps_by_set: p.target_reps_by_set,
     target_tempo: p.target_tempo,
+    constraint_max_weight_kg: p.constraint_max_weight_kg,
     last_set_amrap: p.last_set_amrap,
     reason: p.reason,
     rationale: p.rationale,
