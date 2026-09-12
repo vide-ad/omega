@@ -33,6 +33,21 @@ LLM-coach API, in real use for one full mesocycle before anything fancier.
   a wrong form correction is worse than none; size, format and duration limits enforced server-side.
   **This is also the trigger for splitting the server lane** — see `docs/LANES.md`.
 
+## Later, and deliberately vague
+
+**Omega and North talk to each other.** David's idea, 12 September 2026. North is his task and life
+tracking app. When North reports on his day it could say whether he trained, and whether today looks like
+a day he has the capacity to get to the gym at all. The point is encouragement rather than instruction,
+and the tone rule in `docs/HOUSE-STYLE.md` governs it: reward the effort, small or large, and never
+scold.
+
+No design work on this yet and no milestone. Recorded so the idea survives, and because it argues for
+keeping the read API clean and boring, since North would be a second reader of it after the coach.
+
+Worth knowing, because it is already half true: this session reaches North's planner read-only through an
+MCP connector, so an agent can already see his tasks, projects and calendar. The plumbing between the two
+products exists at the agent layer before either app knows about the other.
+
 ## Decisions made (and why)
 
 - **PWA, not native.** Fastest to the phone, no App Store, works offline with IndexedDB; iOS 26 makes install trivial.

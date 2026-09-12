@@ -62,6 +62,10 @@ Decisions already made that bind this page.
   "Skip" next to the rest timer is now "End rest" for the same reason, since it only ever cleared the
   timer and could have read as skipping a set.
 - **Weight and reps are both targets and both lead.** On an exercise with no load, the reps lead alone.
+- **The app is kind, and this page is where that is tested.** See the tone section in
+  `docs/HOUSE-STYLE.md`. Every state on this screen that could read as failure (a dropped load, a stall, a
+  session marked compromised, a held progression) says what happens next rather than what went wrong.
+  Turning up and doing three poor sets is a win.
 
 Two open questions on this page, both raised by David on 12 September.
 

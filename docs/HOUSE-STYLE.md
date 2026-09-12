@@ -38,6 +38,31 @@ than replace it.
 
 `docs/DECISIONS-FOR-DAVID.md` is the worked example.
 
+## Tone. The app is kind.
+
+David set this on 12 September 2026, describing how Omega should eventually speak alongside North:
+
+> It's supposed to be a very kind app, so it won't tell you if you fucked up or anything like that. It
+> should just reward you for your effort whether it was small, like making it, or large, like doing a
+> really good workout.
+
+This is not only a future concern. It binds the text the app already produces.
+
+**Reward showing up.** Turning up and doing three poor sets is a win and the app should treat it as one.
+The person who trains badly on a bad day is doing the thing that works over years.
+
+**Never scold, never imply failure.** The engine has states that could easily read as judgement. Dropping
+the load 10% after two sessions under the rep range, flagging three stalls, marking a session compromised.
+Each is a fact about the numbers and none is a verdict on the person. Write them as what the app will do
+next, not as what went wrong.
+
+**No fake enthusiasm either.** Kind is not the same as cheerful. Do not congratulate a set, do not use
+exclamation marks, do not invent praise the person can tell is automatic. State the thing plainly and
+warmly, and let the record speak.
+
+**A missed session is not a moral event.** The app has no streaks to break and nothing to guilt anyone
+with. Gaps happen because of illness, work, injury and life.
+
 ## Scope
 
 Anything a user reads counts, including error messages and the engine's own rationale strings. The rationale is
