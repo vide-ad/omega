@@ -57,6 +57,24 @@ Decisions already made that bind this page.
 - Colour has one owner each (`docs/DESIGN-REVIEW.md`).
 - One exercise open at a time, because the version chalk built ran to eight phone screens.
 - The "today was rough" toggle lives here now, not on a separate readiness page.
+- **Plain words, not gym jargon.** David did not know what AMRAP meant when he saw it on a button in his
+  own app, so the label is "To failure". Nothing in this app uses a term he would have to look up, and
+  "Skip" next to the rest timer is now "End rest" for the same reason, since it only ever cleared the
+  timer and could have read as skipping a set.
+- **Weight and reps are both targets and both lead.** On an exercise with no load, the reps lead alone.
+
+Two open questions on this page, both raised by David on 12 September.
+
+- **Per-set weights.** He varies the weight across sets in 64% of his exercise-sessions (27% ascending,
+  16% descending, 21% up and down, against 36% flat), and the engine prescribes exactly one weight.
+  The mockup answers it by displaying last time's actual ramp, which costs nothing, and the engine keeps
+  reading the modal working weight, which already handles his real pattern of working up to a top set.
+  Whether the engine should prescribe a ramp is undecided and it is a real amendment if so, because the
+  rule for advancing a flat weight does not generalise to a pyramid.
+- **Coach-written exercise notes.** David asked for a markdown file per exercise holding cues and the
+  reasoning for why it is in the programme, readable and editable by the coach, shown alongside the
+  engine's own rationale. Chalk's reading of the scope is awaiting his confirmation before it gets a
+  contract. It is a new feature, not a screen change.
 
 **2. Today.** Not started.
 The landing screen. What block and week you are in, which routines you can start, and a resume card if a session

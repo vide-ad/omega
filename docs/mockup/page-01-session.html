@@ -155,6 +155,14 @@ button{font-family:inherit; color:inherit; cursor:pointer; border:0; background:
 }
 .script .num .u{font-size:var(--t-17); font-weight:500}
 .script .col{display:flex; flex-direction:column; gap:3px; padding-bottom:3px}
+.script .pair{display:flex; align-items:flex-end; gap:9px}
+.script .by{font-size:var(--t-15); color:var(--iron-550); font-family:var(--f-num); padding-bottom:4px}
+.ramp{
+  font-family:var(--f-num); font-size:var(--t-12); color:var(--chalk-3);
+  margin-top:7px; display:flex; gap:6px; align-items:baseline;
+}
+.ramp .lab{font-family:var(--f); font-size:var(--t-11); color:var(--iron-550);
+  text-transform:uppercase; letter-spacing:.06em; font-weight:700}
 .script .reason{
   font-size:var(--t-11); font-weight:700; letter-spacing:.07em; text-transform:uppercase;
   color:var(--brass);
@@ -338,7 +346,7 @@ button{font-family:inherit; color:inherit; cursor:pointer; border:0; background:
             <span class="r1" id="r1">No timer running</span>
             <span class="r2" id="r2">It starts when you log a set</span>
           </span>
-          <button class="skip" id="skip">Skip</button>
+          <button class="skip" id="skip">End rest</button>
           <span class="bar" id="bar" style="transform:scaleX(0)"></span>
         </div>
 
@@ -391,19 +399,49 @@ button{font-family:inherit; color:inherit; cursor:pointer; border:0; background:
       <hr class="divide">
 
       <div class="note">
-        <h3><span class="n">05</span> Things I am unsure about, so aim here first</h3>
-        <p class="ask-you"><strong>The reps stepper.</strong> I pre-fill the target and give you plus and
-        minus. If you usually miss the target by three or four reps, that is up to eight taps and a number
-        pad would be faster. Which is it in practice?</p>
-        <p class="ask-you" style="margin-top:9px"><strong>Where the rest timer lives.</strong> It is pinned
-        to the bottom so you can see it without scrolling. It could instead sit inside the open card, which
-        buys back 68 pixels of screen.</p>
-        <p class="ask-you" style="margin-top:9px"><strong>Whether "Why this?" should start open.</strong>
-        Right now the engine's reasoning is one tap away. Collapsed keeps the screen short, but you did say
-        you read it between sets.</p>
-        <p class="ask-you" style="margin-top:9px"><strong>Warmups.</strong> I have put them behind a toggle
-        on the set row, so a warmup is a set you mark rather than a separate section. Your Strong data has
-        130 of them, so they matter, but I do not know if you log them as you go or all at the start.</p>
+        <h3><span class="n">05</span> Changed after your first round</h3>
+        <p><strong>Skip is now End rest.</strong> It only ever cleared the timer, but the old label could
+        have read as skipping a set or an exercise. Your question found that.</p>
+        <p><strong>AMRAP is now To failure.</strong> You did not know the word, and this app is meant to
+        speak plainly. It means going until you cannot do another clean rep, and the engine treats it as
+        effort zero because failure is its own answer. It is rare for you anyway: 22 such sets in nine
+        years, and none of your routines ask for one.</p>
+        <p><strong>Weight and reps are both at the top now</strong>, both brass, both readable at arm's
+        length. On the Ab Wheel the reps lead on their own, because that is the only target there is.</p>
+        <p><strong>Warmups stay a toggle.</strong> Your data backs your instinct that it varies, though it
+        is lopsided: of your 130 marked warmups, 107 are on the session's first exercise and 23 are on a
+        later one. A toggle covers both without the app insisting on either.</p>
+      </div>
+
+      <hr class="divide">
+
+      <div class="note">
+        <h3><span class="n">06</span> The pyramid problem, which is bigger than a sub-line</h3>
+        <p>I checked every exercise-session you logged in the last 12 months. You use the same weight for
+        every set only <strong>36%</strong> of the time. The rest is ascending (27%), descending (16%), or
+        up and down (21%). Omega prescribes exactly one weight per exercise, so it is modelling a way of
+        training you use barely a third of the time.</p>
+        <p>One thing takes the sting out. Your bench on 31 August was 40, 50, 52.5, 52.5, which is not a
+        programmed pyramid, it is you working up to a top set with the first sets acting as unmarked
+        warmups. The engine already reads that correctly, because it takes the most common working weight
+        rather than an average, so it sees 52.5 and not 48.75.</p>
+        <p>So the new <em>Last time</em> line under the prescription shows your actual ramp. You log
+        whatever you lift, the engine keeps reading the top set, and nothing has to change underneath.</p>
+        <p class="ask-you"><strong>The open question.</strong> Is that enough, or do you want the engine to
+        actually prescribe a ramp, a weight per set? That is a real change to how progression works, since
+        the rule for moving up a flat weight does not obviously apply to a pyramid. I would rather try the
+        display version first and change the engine only if it turns out not to be enough.</p>
+      </div>
+
+      <hr class="divide">
+
+      <div class="note">
+        <h3><span class="n">07</span> The notes file, where I need you to confirm I have you right</h3>
+        <p class="ask-you">My reading of what you asked for: a markdown file per exercise, holding the cues
+        and the reasoning for why it is in your programme, which the coach can read and rewrite, and which
+        you see in the app alongside the engine's own "Why this?". Two layers, one from the engine about
+        this session's numbers, one from the coach about the exercise itself. Confirm or correct me and I
+        will write the contract, because it is a new feature rather than a screen change.</p>
       </div>
 
     </div>
@@ -425,6 +463,7 @@ const EX = [
   { id:'bench', name:'Flat Barbell Bench Press', sets:3, lo:8, hi:10, rir:3, rest:150, incr:2.5,
     weight:55, reason:'add load', done:2, mode:'chips', open:true,
     rationale:'Last qualifying session 31 August: 52.5 kg for 10, 10, 12 reps at effort 3 (target 3, range 8 to 10). Every set reached the top of the range with effort in hand, so add 2.5 kg to make 55 kg and reset to 8 reps.',
+    ramp:'you worked up 40, 50, 52.5, 52.5 kg',
     logged:[{w:55,r:10,rir:2},{w:55,r:10,rir:2}] },
 
 
@@ -442,7 +481,8 @@ const EX = [
 
   { id:'lat', name:'Cable Lateral Raise', sets:4, lo:12, hi:15, rir:3, rest:90, incr:2.5,
     weight:7.5, reason:'add reps', done:0, mode:'chips',
-    rationale:'Last qualifying session 31 August: 7.5 kg for 13, 13, 12, 11 reps at effort 3 (target 3, range 12 to 15). Not every set reached the top of the range, so hold 7.5 kg and target one more rep per set (14, 14, 13, 12).' },
+    rationale:'Last qualifying session 31 August: 7.5 kg for 13, 13, 12, 11 reps at effort 3 (target 3, range 12 to 15). Not every set reached the top of the range, so hold 7.5 kg and target one more rep per set (14, 14, 13, 12).',
+    ramp:'5, 7.5, 7.5, 7.5 kg' },
 
 
   { id:'chin', name:'Weighted Chin-Up', sets:3, lo:6, hi:8, rir:3, rest:180, incr:2.5,
@@ -505,14 +545,32 @@ function render(){
     const body = el('<div class="ex-body"></div>');
 
     const noweight = e.weight === null;
+    const bodyweight = !noweight && e.incr === 0;
+    // Weight and reps are both targets, so both are brass and both are legible from arm's
+    // length. On a bodyweight exercise the reps ARE the target, so they lead alone.
+    const head2 = noweight
+      ? `<span class="num">No weight suggested</span>`
+      : bodyweight
+        ? `<span class="pair"><span class="num">${e.lo}<span class="u"> reps</span></span>
+             <span class="by">bodyweight</span></span>`
+        : `<span class="pair">
+             <span class="num">${kg(e.weight)}<span class="u"> kg</span></span>
+             <span class="by">for</span>
+             <span class="num">${e.lo}<span class="u"> reps</span></span>
+           </span>`;
     body.appendChild(el(`<div class="script ${noweight?'noweight':''}">
-        <span class="num">${noweight ? 'No weight suggested'
-          : (e.incr===0 ? 'Bodyweight' : `${kg(e.weight)}<span class="u"> kg</span>`)}</span>
+        ${head2}
         <span class="col">
           <span class="reason">${e.reason}</span>
-          <span class="shape">${shape(e)}</span>
+          <span class="shape">${e.sets} sets, effort ${e.rir}</span>
         </span>
       </div>`));
+    if (e.ramp) {
+      body.appendChild(el(`<div class="ramp">
+          <span class="lab">Last time</span>
+          <span>${e.ramp}</span>
+        </div>`));
+    }
 
     const why = el(`<button class="why" type="button">
         <span class="car">&#9662;</span> Why this?
@@ -557,7 +615,7 @@ function render(){
     const live = el(`<div class="live">
         <div class="live-head">
           <span>Set ${n+1} of ${e.sets}</span>
-          <span>${st.warm?'Warmup':(st.amrap?'AMRAP, go to failure':'Working set')}</span>
+          <span>${st.warm?'Warmup':(st.amrap?'Going to failure':'Working set')}</span>
         </div>
       </div>`);
 
@@ -604,7 +662,7 @@ function render(){
     ask.querySelector('.btn-noanswer').addEventListener('click', () => commit(e, null));
     live.appendChild(ask);
 
-    const tb = el(`<div class="tickbar"><button class="btn-log" type="button">Log ${st.warm?'warmup':'AMRAP set'}</button></div>`);
+    const tb = el(`<div class="tickbar"><button class="btn-log" type="button">Log ${st.warm?'warmup':'set taken to failure'}</button></div>`);
     tb.querySelector('button').addEventListener('click', () => commit(e, st.amrap ? 0 : null));
     live.appendChild(tb);
 
@@ -615,7 +673,7 @@ function render(){
       b.addEventListener('click', fn); return b;
     };
     flags.appendChild(mkFlag('Warmup', st.warm, '', () => { st.warm = !st.warm; if(st.warm) st.amrap=false; render(); }));
-    flags.appendChild(mkFlag('AMRAP', st.amrap, '', () => { st.amrap = !st.amrap; if(st.amrap) st.warm=false; render(); }));
+    flags.appendChild(mkFlag('To failure', st.amrap, '', () => { st.amrap = !st.amrap; if(st.amrap) st.warm=false; render(); }));
     flags.appendChild(mkFlag('Pain', st.pain, 'pain', () => { st.pain = !st.pain; render(); }));
     live.appendChild(flags);
 
