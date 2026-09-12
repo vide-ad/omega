@@ -1,0 +1,688 @@
+<title>Omega Session Screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ==========================================================================
+   OMEGA, PAGE ONE. The active session screen.
+
+   Dark only by intent. David trains at 6am in bad gym lighting, and the
+   on-device gate in docs/DESIGN-REVIEW.md is "dark only, in direct sun".
+
+   THE ENCODING CONTRACT, carried across from docs/mockup/omega-uplift.html.
+   Every colour has exactly one owner.
+     brass  the engine is speaking. Prescriptions and rationale. Nothing else.
+     moss   banked. A set actually completed.
+     slate  something limits what the engine may conclude. A physio constraint,
+            or a day marked rough.
+     pain   the only alarming colours in the app. Pain and nothing but pain.
+     grey   everything else.
+   ========================================================================== */
+:root{
+  --iron-950:#0B0E12;
+  --iron-900:#10141A;
+  --iron-850:#161B23;
+  --iron-800:#1C222C;
+  --iron-750:#232A36;
+  --iron-700:#2C3441;
+  --iron-650:#3E4857;
+  --iron-550:#6E7B8E;
+
+  --chalk:#F0EDE6;
+  --chalk-2:#C6CAD1;
+  --chalk-3:#A39C94;
+
+  --brass:#E3AC44;
+  --moss:#6FBE7E;
+  --slate:#A594FF;
+  --pain-1:#C08894;
+  --pain-2:#E86F7F;
+  --pain-3:#FF8A72;
+
+  --r:12px; --r-sm:8px;
+  --f:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --f-num:'IBM Plex Mono','SF Mono',Menlo,monospace;
+  --t-11:11px; --t-12:12px; --t-13:13px; --t-15:15px;
+  --t-17:17px; --t-20:20px; --t-26:26px; --t-38:38px;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--iron-950); color:var(--chalk);
+  font-family:var(--f); -webkit-font-smoothing:antialiased;
+  padding:0 16px; padding-block:28px 56px;
+}
+button{font-family:inherit; color:inherit; cursor:pointer; border:0; background:none}
+:focus-visible{outline:2px solid var(--brass); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none !important; animation:none !important}}
+
+.wrap{max-width:1060px; margin:0 auto; display:flex; flex-direction:column; gap:34px}
+
+/* ---------- page masthead ---------- */
+.masthead{display:flex; flex-direction:column; gap:9px; max-width:64ch}
+.eyebrow{
+  font-size:var(--t-11); letter-spacing:.13em; text-transform:uppercase;
+  color:var(--chalk-3); font-weight:600;
+}
+.masthead h1{
+  margin:0; font-size:var(--t-26); font-weight:700; letter-spacing:-.015em;
+  text-wrap:balance;
+}
+.masthead p{margin:0; font-size:var(--t-15); color:var(--chalk-2); line-height:1.6}
+
+/* ---------- stage: phone beside notes ---------- */
+.stage{display:grid; grid-template-columns:390px 1fr; gap:34px; align-items:start}
+@media (max-width:880px){ .stage{grid-template-columns:1fr; gap:28px} }
+
+.phone-hold{position:sticky; top:28px}
+@media (max-width:880px){ .phone-hold{position:static} }
+
+.phone{
+  width:390px; max-width:100%; height:790px; background:var(--iron-900);
+  border-radius:30px; border:1px solid var(--iron-700); overflow:hidden;
+  display:flex; flex-direction:column; position:relative;
+  box-shadow:0 22px 50px rgba(0,0,0,.5);
+}
+.phone-note{
+  margin:10px 2px 0; font-size:var(--t-11); color:var(--chalk-3);
+  letter-spacing:.04em; text-transform:uppercase; font-weight:600;
+}
+
+/* ---------- app header ---------- */
+.hdr{
+  padding:14px 15px 12px; border-bottom:1px solid var(--iron-700);
+  display:flex; flex-direction:column; gap:9px; flex:0 0 auto;
+  background:var(--iron-900);
+}
+.hdr-top{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+.hdr-top h2{margin:0; font-size:var(--t-17); font-weight:600; letter-spacing:-.01em}
+.hdr-meta{font-size:var(--t-12); color:var(--chalk-3); font-family:var(--f-num)}
+.hdr-row{display:flex; align-items:center; gap:7px}
+.tag{
+  font-size:var(--t-11); font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+  padding:4px 8px; border-radius:999px; background:var(--iron-800); color:var(--chalk-3);
+  display:inline-flex; align-items:center; gap:5px;
+}
+.tag.sync{color:var(--moss)}
+.tag.sync .dot{width:6px; height:6px; border-radius:50%; background:var(--moss)}
+.tag.rough{border:1px solid var(--iron-650)}
+.tag.rough[aria-pressed="true"]{background:rgba(165,148,255,.14); border-color:var(--slate); color:var(--slate)}
+.hdr-row .spacer{flex:1}
+.btn-finish{
+  font-size:var(--t-12); font-weight:600; padding:6px 12px; border-radius:999px;
+  border:1px solid var(--iron-550); color:var(--chalk-2);
+}
+
+/* ---------- scroll body ---------- */
+.scroll{flex:1; overflow-y:auto; padding:11px 12px 14px; display:flex; flex-direction:column; gap:7px}
+
+/* ---------- collapsed exercise row ---------- */
+.ex{
+  background:var(--iron-800); border-radius:var(--r); border:1px solid transparent;
+  transition:background .15s;
+}
+.ex.limited{border-left:3px solid var(--slate)}
+.ex.done .ex-name{color:var(--chalk-3)}
+.ex-head{
+  width:100%; display:flex; align-items:center; gap:11px; padding:11px 13px; text-align:left;
+  height:auto; min-height:0;
+}
+.ex-name{font-size:var(--t-15); font-weight:600; flex:1; letter-spacing:-.005em; min-width:0}
+.ex-sub{display:block; font-size:var(--t-12); color:var(--chalk-3); margin-top:3px; font-weight:400}
+.ex-prog{
+  font-family:var(--f-num); font-size:var(--t-12); color:var(--chalk-3);
+  display:flex; align-items:center; gap:6px; flex:0 0 auto; white-space:nowrap;
+}
+.pips{display:flex; gap:3px}
+.pip{width:6px; height:6px; border-radius:50%; background:var(--iron-650)}
+.pip.on{background:var(--moss)}
+
+/* ---------- open exercise card ---------- */
+.ex.open{background:var(--iron-750); border-color:var(--iron-700)}
+.ex-body{display:none; padding:0 13px 13px}
+.ex.open .ex-body{display:block}
+.ex.open .ex-head{padding-bottom:8px}
+
+/* the prescription. brass, and brass only here. */
+.script{
+  display:flex; align-items:flex-end; gap:11px; padding:9px 0 1px;
+  border-top:1px solid var(--iron-700);
+}
+.script .num{
+  font-family:var(--f-num); font-size:var(--t-38); font-weight:600; color:var(--brass);
+  line-height:.95; letter-spacing:-.02em; font-variant-numeric:tabular-nums;
+}
+.script .num .u{font-size:var(--t-17); font-weight:500}
+.script .col{display:flex; flex-direction:column; gap:3px; padding-bottom:3px}
+.script .reason{
+  font-size:var(--t-11); font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--brass);
+}
+.script .shape{font-size:var(--t-12); color:var(--chalk-3); font-family:var(--f-num)}
+.script.noweight{flex-direction:column; align-items:flex-start; gap:5px}
+.script.noweight .num{font-size:var(--t-20); color:var(--slate); line-height:1.25}
+.script.noweight .col{padding-bottom:0}
+.script.noweight .reason{color:var(--slate)}
+
+.why{
+  display:flex; align-items:center; gap:5px; font-size:var(--t-12); color:var(--chalk-2);
+  padding:7px 0 0; font-weight:500;
+}
+.why .car{transition:transform .18s; color:var(--chalk-3)}
+.ex[data-why="1"] .why .car{transform:rotate(180deg)}
+.rationale{
+  display:none; font-size:var(--t-13); line-height:1.55; color:var(--chalk-2);
+  background:var(--iron-850); border-radius:var(--r-sm); padding:10px 11px; margin-top:8px;
+}
+.ex[data-why="1"] .rationale{display:block}
+.rationale .lim{color:var(--slate)}
+
+/* logged sets. moss = banked. */
+.banked{display:flex; flex-direction:column; gap:3px; margin-top:9px}
+.bank{
+  display:flex; align-items:center; gap:8px; padding:5px 10px; border-radius:var(--r-sm);
+  background:var(--iron-800); font-family:var(--f-num); font-size:var(--t-12);
+  font-variant-numeric:tabular-nums;
+}
+.bank .tick{color:var(--moss); font-size:var(--t-15); line-height:1}
+.bank .w{font-weight:600}
+.bank .sep{color:var(--iron-650)}
+.bank .rir{margin-left:auto; color:var(--chalk-3); font-size:var(--t-12)}
+.bank.warm{opacity:.62}
+.bank.warm .tick{color:var(--chalk-3)}
+
+/* the live set */
+.live{margin-top:9px; background:var(--iron-850); border-radius:var(--r); padding:10px}
+.live-head{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  font-size:var(--t-11); letter-spacing:.09em; text-transform:uppercase;
+  color:var(--chalk-3); font-weight:700; margin-bottom:7px;
+}
+.steppers{display:flex; gap:8px}
+.step{flex:1; display:flex; flex-direction:column; gap:5px}
+.step .lab{font-size:var(--t-11); color:var(--chalk-3); font-weight:600; letter-spacing:.04em}
+.step .ctl{display:flex; align-items:stretch; background:var(--iron-900); border-radius:var(--r-sm); overflow:hidden}
+.step .ctl button{
+  width:38px; font-size:var(--t-20); color:var(--chalk-2); background:var(--iron-800);
+  line-height:1; display:flex; align-items:center; justify-content:center;
+}
+.step .ctl button:active{background:var(--iron-700)}
+.step .val{
+  flex:1; text-align:center; font-family:var(--f-num); font-size:var(--t-20); font-weight:600;
+  padding:7px 0; font-variant-numeric:tabular-nums;
+}
+.step .val .u{font-size:var(--t-12); color:var(--chalk-3); font-weight:400}
+
+/* THE COMMIT. Tapping a chip logs the set. David's ruling, 11 Sep. */
+.ask{margin-top:10px}
+.ask-q{font-size:var(--t-13); font-weight:600; margin-bottom:7px}
+.chips{display:flex; gap:6px}
+.chips button{
+  flex:1; min-height:50px; border-radius:var(--r-sm); background:var(--iron-900);
+  border:1px solid var(--iron-550); font-family:var(--f-num); font-size:var(--t-20);
+  font-weight:600; color:var(--chalk); transition:transform .08s, background .12s;
+}
+.chips button:active{transform:scale(.94); background:var(--chalk); color:var(--iron-900)}
+.chips button[disabled]{opacity:.3; border-style:dashed}
+.scale-ends{
+  display:flex; justify-content:space-between; margin-top:5px;
+  font-size:var(--t-11); color:var(--chalk-3);
+}
+.ask-foot{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px}
+.ask-hint{font-size:var(--t-11); color:var(--chalk-3)}
+.btn-noanswer{font-size:var(--t-11); color:var(--chalk-3); text-decoration:underline; text-underline-offset:3px}
+
+/* the tick, for warmups and AMRAP only */
+.tickbar{display:none; margin-top:12px}
+.ex[data-mode="tick"] .tickbar{display:block}
+.ex[data-mode="tick"] .ask{display:none}
+.btn-log{
+  width:100%; min-height:54px; border-radius:var(--r-sm); background:var(--chalk);
+  color:var(--iron-900); font-size:var(--t-15); font-weight:700;
+}
+
+/* set flags */
+.flags{display:flex; gap:6px; margin-top:8px}
+.flag{
+  flex:1; font-size:var(--t-11); font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  padding:7px 4px; border-radius:var(--r-sm); border:1px solid var(--iron-650);
+  color:var(--chalk-3); text-align:center;
+}
+.flag[aria-pressed="true"]{background:var(--chalk); color:var(--iron-900); border-color:var(--chalk)}
+.flag.pain[aria-pressed="true"]{background:var(--pain-2); border-color:var(--pain-2); color:var(--iron-900)}
+
+/* the limit panel, for a constrained exercise */
+.limits{
+  margin-top:11px; background:rgba(165,148,255,.09); border:1px solid rgba(165,148,255,.3);
+  border-radius:var(--r-sm); padding:10px 11px; display:flex; flex-direction:column; gap:7px;
+}
+.limits .lh{
+  font-size:var(--t-11); font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--slate);
+}
+.limits ul{margin:0; padding-left:16px; font-size:var(--t-13); color:var(--chalk-2); line-height:1.6}
+.limits .note{font-size:var(--t-12); color:var(--chalk-3); font-style:italic; line-height:1.5}
+
+/* ---------- rest timer, pinned ---------- */
+.rest{
+  flex:0 0 auto; border-top:1px solid var(--iron-700); background:var(--iron-850);
+  padding:10px 15px; display:flex; align-items:center; gap:12px;
+}
+.rest .clock{
+  font-family:var(--f-num); font-size:var(--t-26); font-weight:600; letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums; min-width:74px;
+}
+.rest .rl{display:flex; flex-direction:column; gap:1px; flex:1}
+.rest .r1{font-size:var(--t-12); font-weight:600}
+.rest .r2{font-size:var(--t-11); color:var(--chalk-3)}
+.rest .skip{font-size:var(--t-12); font-weight:600; color:var(--chalk-2); padding:7px 12px;
+  border:1px solid var(--iron-650); border-radius:999px}
+.rest.idle .clock{color:var(--chalk-3)}
+.rest .bar{position:absolute; left:0; right:0; bottom:0; height:2px; background:var(--brass); transform-origin:left}
+
+/* ---------- notes column ---------- */
+.notes{display:flex; flex-direction:column; gap:22px; max-width:62ch}
+.note h3{
+  margin:0 0 8px; font-size:var(--t-15); font-weight:700; letter-spacing:-.005em;
+  display:flex; align-items:baseline; gap:8px;
+}
+.note h3 .n{
+  font-family:var(--f-num); font-size:var(--t-12); color:var(--brass); font-weight:600;
+}
+.note p{margin:0 0 9px; font-size:var(--t-13); line-height:1.62; color:var(--chalk-2)}
+.note p:last-child{margin-bottom:0}
+.note .ask-you{
+  border-left:2px solid var(--brass); padding:2px 0 2px 11px; color:var(--chalk);
+  font-size:var(--t-13); line-height:1.6;
+}
+.note code{
+  font-family:var(--f-num); font-size:.92em; background:var(--iron-850);
+  padding:1px 5px; border-radius:4px; color:var(--chalk-2);
+}
+.divide{height:1px; background:var(--iron-700); border:0; margin:0}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Omega, page one of twelve</div>
+    <h1>The active session screen</h1>
+    <p>The screen you hold between sets. Everything here is real: your Day 1 template, and the weights
+    from your session on 31 August. Bench is open and mid-set because that is the state you will be in
+    most of the time. It works, so tap things.</p>
+  </header>
+
+  <div class="stage">
+
+    <div class="phone-hold">
+      <div class="phone">
+
+        <div class="hdr">
+          <div class="hdr-top">
+            <h2>Quads and Pull</h2>
+            <span class="hdr-meta">Block 1, week 2</span>
+          </div>
+          <div class="hdr-row">
+            <span class="tag sync"><span class="dot"></span>Saved</span>
+            <button class="tag rough" id="rough" aria-pressed="false">Today was rough</button>
+            <span class="spacer"></span>
+            <button class="btn-finish">Finish</button>
+          </div>
+        </div>
+
+        <div class="scroll" id="scroll"></div>
+
+        <div class="rest idle" id="rest" style="position:relative">
+          <span class="clock" id="clock">Rest</span>
+          <span class="rl">
+            <span class="r1" id="r1">No timer running</span>
+            <span class="r2" id="r2">It starts when you log a set</span>
+          </span>
+          <button class="skip" id="skip">Skip</button>
+          <span class="bar" id="bar" style="transform:scaleX(0)"></span>
+        </div>
+
+      </div>
+      <p class="phone-note">390 by 790, roughly an iPhone 15</p>
+    </div>
+
+    <div class="notes">
+
+      <div class="note">
+        <h3><span class="n">01</span> One tap logs the set</h3>
+        <p>There is no tick on a working set. You adjust the weight and reps if they are wrong, then tap
+        how many you had left, and that tap does both jobs. This is your ruling from 11 September, and
+        the reason it matters is that both numbers are already filled in for you, so a normal set costs
+        you exactly one tap. Fewer than Strong, and effort comes free with it.</p>
+        <p>Warmups and AMRAP sets keep a plain tick, because effort means nothing on a warmup and an
+        AMRAP set is zero by definition. Toggle either one and watch the chips swap for a button.</p>
+      </div>
+
+      <hr class="divide">
+
+      <div class="note">
+        <h3><span class="n">02</span> Brass means the engine is talking</h3>
+        <p>The big number is a suggestion, never a record. Nothing else on the screen is brass, so an
+        instruction never looks like something you did. Green is the opposite: a set you have actually
+        banked. Violet marks anything that limits what the engine is allowed to conclude, so the
+        chin-up waiting on your physio and the capped curl both carry it.</p>
+        <p>Red and pink belong to pain and to nothing else in the whole app.</p>
+      </div>
+
+      <hr class="divide">
+
+      <div class="note">
+        <h3><span class="n">03</span> The curl shows a limit, not a weight</h3>
+        <p>Open the Incline Dumbbell Curl. Your ruling was that the app stays out of the decision near
+        an injured nerve, so it prescribes nothing and shows you the physio's limits instead. You pick
+        the weight. Notice it still counts your sets and still gives you a rest timer, because you are
+        still training, it just is not telling you what to lift.</p>
+      </div>
+
+      <hr class="divide">
+
+      <div class="note">
+        <h3><span class="n">04</span> One exercise open at a time</h3>
+        <p>The version I built before ran to about 6,600 pixels, roughly eight phone screens, because
+        every exercise was expanded at once. Here the open one is the only one with detail and the rest
+        are a name and a row of dots. Finish an exercise and the next one opens by itself.</p>
+      </div>
+
+      <hr class="divide">
+
+      <div class="note">
+        <h3><span class="n">05</span> Things I am unsure about, so aim here first</h3>
+        <p class="ask-you"><strong>The reps stepper.</strong> I pre-fill the target and give you plus and
+        minus. If you usually miss the target by three or four reps, that is up to eight taps and a number
+        pad would be faster. Which is it in practice?</p>
+        <p class="ask-you" style="margin-top:9px"><strong>Where the rest timer lives.</strong> It is pinned
+        to the bottom so you can see it without scrolling. It could instead sit inside the open card, which
+        buys back 68 pixels of screen.</p>
+        <p class="ask-you" style="margin-top:9px"><strong>Whether "Why this?" should start open.</strong>
+        Right now the engine's reasoning is one tap away. Collapsed keeps the screen short, but you did say
+        you read it between sets.</p>
+        <p class="ask-you" style="margin-top:9px"><strong>Warmups.</strong> I have put them behind a toggle
+        on the set row, so a warmup is a set you mark rather than a separate section. Your Strong data has
+        130 of them, so they matter, but I do not know if you log them as you go or all at the start.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   Real data. David's seeded Day 1 template, with the loads he actually used
+   on 31 August 2026 and the engine states each one would really produce.
+   ========================================================================== */
+const EX = [
+  { id:'squat', name:'Barbell Back Squat', sets:3, lo:6, hi:8, rir:3, rest:180, incr:2.5,
+    weight:27.5, reason:'add load', done:3, mode:'chips',
+    rationale:'Last qualifying session 31 August: 25 kg for 8, 8, 8 reps at effort 3 (target 3, range 6 to 8). Every set reached the top of the range with effort in hand, so add 2.5 kg to make 27.5 kg and reset to 6 reps.',
+    logged:[{w:27.5,r:8,rir:3},{w:27.5,r:8,rir:2},{w:27.5,r:7,rir:2}] },
+
+
+  { id:'bench', name:'Flat Barbell Bench Press', sets:3, lo:8, hi:10, rir:3, rest:150, incr:2.5,
+    weight:55, reason:'add load', done:2, mode:'chips', open:true,
+    rationale:'Last qualifying session 31 August: 52.5 kg for 10, 10, 12 reps at effort 3 (target 3, range 8 to 10). Every set reached the top of the range with effort in hand, so add 2.5 kg to make 55 kg and reset to 8 reps.',
+    logged:[{w:55,r:10,rir:2},{w:55,r:10,rir:2}] },
+
+
+  { id:'legext', name:'Leg Extension', sets:3, lo:10, hi:12, rir:3, rest:120, incr:5,
+    weight:30, reason:'consolidate', done:0, mode:'chips',
+    rationale:'Last qualifying session 31 August: 30 kg for 12, 12, 12 reps at effort 2 (target 3, range 10 to 12). Reps are there but effort 2 is under the target 3, so hold 30 kg and the same reps until it drops.' },
+
+
+  { id:'curl', name:'Incline Dumbbell Curl', sets:3, lo:15, hi:15, rir:3, rest:90, incr:1,
+    weight:null, reason:'you set the weight', done:0, mode:'chips', limited:true,
+    rationale:'An injury constraint applies here, so I am not suggesting a weight. You pick it.',
+    limits:{ cap:5, reps:15, tempo:'3-0-3-0',
+      note:'Physio: right radial nerve. Seated only, no more than 5 kg, escalate about 1 kg per two pain-free weeks.' } },
+
+
+  { id:'lat', name:'Cable Lateral Raise', sets:4, lo:12, hi:15, rir:3, rest:90, incr:2.5,
+    weight:7.5, reason:'add reps', done:0, mode:'chips',
+    rationale:'Last qualifying session 31 August: 7.5 kg for 13, 13, 12, 11 reps at effort 3 (target 3, range 12 to 15). Not every set reached the top of the range, so hold 7.5 kg and target one more rep per set (14, 14, 13, 12).' },
+
+
+  { id:'chin', name:'Weighted Chin-Up', sets:3, lo:6, hi:8, rir:3, rest:180, incr:2.5,
+    weight:null, reason:'needs clearance', done:0, mode:'chips', limited:true,
+    rationale:'Held pending physio clearance. No load is prescribed until the constraint is cleared, and sets may still be logged.',
+    limits:{ note:'Physio: reassess the elbow before loaded pulling resumes.' } },
+
+
+  { id:'abw', name:'Ab Wheel Rollout', sets:3, lo:8, hi:12, rir:3, rest:90, incr:0,
+    weight:0, reason:'add reps', done:0, mode:'chips',
+    rationale:'Last qualifying session 31 August: bodyweight for 10, 10, 10 reps at effort 3 (target 3, range 8 to 12). Every set reached the top of the range but this exercise has no load increment, so add a rep per set (11, 11, 11).' },
+];
+
+const S = {};
+EX.forEach(e => S[e.id] = {
+  logged: (e.logged || []).map(x => ({...x})),
+  weight: e.weight === null ? (e.limits && e.limits.cap ? e.limits.cap : 0) : e.weight,
+  reps: e.lo,
+  warm:false, amrap:false, pain:false, why:false,
+});
+let openId = EX.find(e => e.open).id;
+
+const kg = n => (Math.round(n*10)/10).toString();
+const el = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstElementChild; };
+
+function shape(e){
+  const r = e.lo === e.hi ? `${e.lo} reps` : `${e.lo} to ${e.hi} reps`;
+  return `${e.sets} sets, ${r}, effort ${e.rir}`;
+}
+
+function render(){
+  const s = document.getElementById('scroll');
+  const keep = s.scrollTop;
+  s.innerHTML = '';
+
+  EX.forEach(e => {
+    const st = S[e.id];
+    const n = st.logged.filter(x => !x.warm).length;
+    const complete = n >= e.sets;
+    const isOpen = e.id === openId;
+
+    const node = el(`<section class="ex ${isOpen?'open':''} ${e.limited?'limited':''} ${complete&&!isOpen?'done':''}"
+                     data-id="${e.id}" data-why="${st.why?1:0}"
+                     data-mode="${(st.warm||st.amrap)?'tick':'chips'}"></section>`);
+
+    /* head */
+    const head = el(`<button class="ex-head" type="button">
+        <span class="ex-name">${e.name}${isOpen?'':`<span class="ex-sub">${shape(e)}</span>`}</span>
+        <span class="ex-prog">
+          <span class="pips">${Array.from({length:e.sets},(_,i)=>`<span class="pip ${i<n?'on':''}"></span>`).join('')}</span>
+          <span>${n} of ${e.sets}</span>
+        </span>
+      </button>`);
+    head.addEventListener('click', () => { openId = isOpen ? null : e.id; render(); });
+    node.appendChild(head);
+
+    if (!isOpen) { s.appendChild(node); return; }
+
+    /* body */
+    const body = el('<div class="ex-body"></div>');
+
+    const noweight = e.weight === null;
+    body.appendChild(el(`<div class="script ${noweight?'noweight':''}">
+        <span class="num">${noweight ? 'No weight suggested'
+          : (e.incr===0 ? 'Bodyweight' : `${kg(e.weight)}<span class="u"> kg</span>`)}</span>
+        <span class="col">
+          <span class="reason">${e.reason}</span>
+          <span class="shape">${shape(e)}</span>
+        </span>
+      </div>`));
+
+    const why = el(`<button class="why" type="button">
+        <span class="car">&#9662;</span> Why this?
+      </button>`);
+    why.addEventListener('click', () => { st.why = !st.why; render(); });
+    body.appendChild(why);
+    body.appendChild(el(`<div class="rationale">${e.rationale}</div>`));
+
+    if (e.limits && (e.limits.cap || e.limits.note)) {
+      const items = [];
+      if (e.limits.cap)   items.push(`No more than <strong>${e.limits.cap} kg</strong>`);
+      if (e.limits.reps)  items.push(`At least <strong>${e.limits.reps} reps</strong>`);
+      if (e.limits.tempo) items.push(`Tempo <strong>${e.limits.tempo}</strong>`);
+      body.appendChild(el(`<div class="limits">
+          <span class="lh">Your limits</span>
+          ${items.length?`<ul>${items.map(i=>`<li>${i}</li>`).join('')}</ul>`:''}
+          <p class="note">${e.limits.note}</p>
+        </div>`));
+    }
+
+    /* banked sets */
+    if (st.logged.length) {
+      const b = el('<div class="banked"></div>');
+      st.logged.forEach(x => b.appendChild(el(`<div class="bank ${x.warm?'warm':''}">
+          <span class="tick">&#10003;</span>
+          <span class="w">${x.w===0?'Bodyweight':kg(x.w)+' kg'}</span>
+          <span class="sep">/</span>
+          <span>${x.r} reps</span>
+          <span class="rir">${x.warm?'warmup':(x.rir===null?'no answer':x.rir+' left')}</span>
+        </div>`)));
+      body.appendChild(b);
+    }
+
+    if (complete) {
+      body.appendChild(el(`<div class="live" style="text-align:center">
+        <span style="font-size:13px;color:var(--moss);font-weight:600">All ${e.sets} sets done</span>
+      </div>`));
+      node.appendChild(body); s.appendChild(node); return;
+    }
+
+    /* live set */
+    const live = el(`<div class="live">
+        <div class="live-head">
+          <span>Set ${n+1} of ${e.sets}</span>
+          <span>${st.warm?'Warmup':(st.amrap?'AMRAP, go to failure':'Working set')}</span>
+        </div>
+      </div>`);
+
+    const steppers = el('<div class="steppers"></div>');
+    const mkStep = (lab, val, unit, onMinus, onPlus) => {
+      const w = el(`<div class="step">
+          <span class="lab">${lab}</span>
+          <div class="ctl">
+            <button type="button" aria-label="${lab} down">&minus;</button>
+            <span class="val">${val}${unit?`<span class="u"> ${unit}</span>`:''}</span>
+            <button type="button" aria-label="${lab} up">+</button>
+          </div>
+        </div>`);
+      const bs = w.querySelectorAll('button');
+      bs[0].addEventListener('click', onMinus);
+      bs[1].addEventListener('click', onPlus);
+      return w;
+    };
+    const inc = e.incr || 2.5;
+    steppers.appendChild(mkStep('Weight', st.weight===0?'BW':kg(st.weight), st.weight===0?'':'kg',
+      () => { st.weight = Math.max(0, st.weight - inc); render(); },
+      () => { st.weight = st.weight + inc; render(); }));
+    steppers.appendChild(mkStep('Reps', st.reps, '',
+      () => { st.reps = Math.max(1, st.reps - 1); render(); },
+      () => { st.reps = st.reps + 1; render(); }));
+    live.appendChild(steppers);
+
+    /* THE COMMIT */
+    const ask = el(`<div class="ask">
+        <div class="ask-q">How many reps did you have left?</div>
+        <div class="chips"></div>
+        <div class="scale-ends"><span>0, nothing left</span><span>5, plenty left</span></div>
+        <div class="ask-foot">
+          <span class="ask-hint">Tapping one logs the set.</span>
+          <button class="btn-noanswer" type="button">Log without answering</button>
+        </div>
+      </div>`);
+    const chips = ask.querySelector('.chips');
+    [0,1,2,3,4,5].forEach(v => {
+      const b = el(`<button type="button" aria-label="${v} reps left">${v}</button>`);
+      b.addEventListener('click', () => commit(e, v));
+      chips.appendChild(b);
+    });
+    ask.querySelector('.btn-noanswer').addEventListener('click', () => commit(e, null));
+    live.appendChild(ask);
+
+    const tb = el(`<div class="tickbar"><button class="btn-log" type="button">Log ${st.warm?'warmup':'AMRAP set'}</button></div>`);
+    tb.querySelector('button').addEventListener('click', () => commit(e, st.amrap ? 0 : null));
+    live.appendChild(tb);
+
+    /* flags */
+    const flags = el('<div class="flags"></div>');
+    const mkFlag = (label, on, cls, fn) => {
+      const b = el(`<button class="flag ${cls||''}" type="button" aria-pressed="${on}">${label}</button>`);
+      b.addEventListener('click', fn); return b;
+    };
+    flags.appendChild(mkFlag('Warmup', st.warm, '', () => { st.warm = !st.warm; if(st.warm) st.amrap=false; render(); }));
+    flags.appendChild(mkFlag('AMRAP', st.amrap, '', () => { st.amrap = !st.amrap; if(st.amrap) st.warm=false; render(); }));
+    flags.appendChild(mkFlag('Pain', st.pain, 'pain', () => { st.pain = !st.pain; render(); }));
+    live.appendChild(flags);
+
+    body.appendChild(live);
+    node.appendChild(body);
+    s.appendChild(node);
+  });
+
+  s.scrollTop = keep;
+
+  // The chips are the only way to log a set, so they must never sit below the fold.
+  const card = s.querySelector('.ex.open');
+  if (card) {
+    const bottom = card.offsetTop + card.offsetHeight;
+    if (bottom > s.scrollTop + s.clientHeight || card.offsetTop < s.scrollTop) {
+      s.scrollTop = Math.max(0, Math.min(card.offsetTop - 6, bottom - s.clientHeight + 10));
+    }
+  }
+}
+
+function commit(e, rir){
+  const st = S[e.id];
+  st.logged.push({ w: st.weight, r: st.reps, rir: st.amrap ? 0 : rir, warm: st.warm });
+  const wasWarm = st.warm;
+  st.warm = false; st.amrap = false; st.pain = false;
+  st.reps = e.lo;
+
+  const n = st.logged.filter(x => !x.warm).length;
+  if (!wasWarm && n >= e.sets) {
+    const i = EX.findIndex(x => x.id === e.id);
+    const next = EX.slice(i+1).find(x => S[x.id].logged.filter(y=>!y.warm).length < x.sets);
+    if (next) openId = next.id;
+  }
+  startRest(e.rest, e.name);
+  render();
+}
+
+/* rest timer, from an end timestamp so it survives the screen locking */
+let endAt = 0, total = 0, tick = null, restName = '';
+function startRest(sec, name){
+  endAt = Date.now() + sec*1000; total = sec; restName = name;
+  document.getElementById('rest').classList.remove('idle');
+  if (tick) clearInterval(tick);
+  tick = setInterval(paint, 200); paint();
+}
+function paint(){
+  const left = Math.max(0, Math.round((endAt - Date.now())/1000));
+  const m = Math.floor(left/60), s = left%60;
+  document.getElementById('clock').textContent = `${m}:${String(s).padStart(2,'0')}`;
+  document.getElementById('r1').textContent = left > 0 ? `Resting after ${restName}` : 'Rest is up';
+  document.getElementById('r2').textContent = left > 0 ? 'Next set when the clock runs out' : 'Go when you are ready';
+  document.getElementById('bar').style.transform = `scaleX(${total?left/total:0})`;
+  if (left <= 0 && tick) { clearInterval(tick); tick = null; }
+}
+document.getElementById('skip').addEventListener('click', () => {
+  if (tick) clearInterval(tick); tick = null;
+  endAt = 0; total = 0;
+  const r = document.getElementById('rest'); r.classList.add('idle');
+  document.getElementById('clock').textContent = 'Rest';
+  document.getElementById('r1').textContent = 'No timer running';
+  document.getElementById('r2').textContent = 'It starts when you log a set';
+  document.getElementById('bar').style.transform = 'scaleX(0)';
+});
+document.getElementById('rough').addEventListener('click', (ev) => {
+  const b = ev.currentTarget;
+  b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+});
+
+render();
+</script>
