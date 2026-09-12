@@ -104,13 +104,13 @@ const DEFS: Def[] = [
     cues: 'Seated, wider grip per physio clearance.',
     credits: { biceps: 1, brachialis: 0.5 } },
   { n: 62, name: 'Bayesian Cable Curl', aliases: ['bayesian curl', 'behind-the-body cable curl'], equipment: 'cable', pattern: 'elbow_flexion', lengthened: true, reps: [10, 12], rir: 1, rest: 90, incr: 2.5,
-    cues: 'Standing. Note: the current rehab constraint says "seated only" — confirm with physio or substitute a seated curl.',
+    cues: 'Standing. Note: the current rehab constraint says "seated only", so confirm with physio or substitute a seated curl.',
     credits: { biceps: 1, brachialis: 0.25 } },
   { n: 63, name: 'Machine Curl', aliases: ['bicep curl machine'], equipment: 'machine', pattern: 'elbow_flexion', reps: [10, 15], rir: 1, rest: 90, incr: 2.5,
     cues: 'Pre-injury working load 20 kg. Currently capped by rehab constraint.',
     credits: { biceps: 1, brachialis: 0.5 } },
   { n: 64, name: 'Dumbbell Hammer Curl', aliases: ['hammer curl'], equipment: 'dumbbell', pattern: 'elbow_flexion', reps: [10, 12], rir: 1, rest: 90, incr: 1,
-    cues: 'Pre-injury working load 14 kg × 12. Neutral grip loads brachialis/brachioradialis — check with physio before reintroducing.',
+    cues: 'Pre-injury working load 14 kg × 12. Neutral grip loads brachialis and brachioradialis. Check with physio before reintroducing.',
     credits: { brachialis: 1, biceps: 0.5, forearms: 0.5 } },
 
   // --- Core -----------------------------------------------------------------

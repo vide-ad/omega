@@ -99,7 +99,7 @@ describe('seeded library', () => {
     const res = await call<{ items: TemplateWithExercises[] }>(app, 'GET', '/templates');
     expect(res.status).toBe(200);
     expect(res.body.items.map((t) => [t.name, t.version, t.exercises.length])).toEqual([
-      ['Day 1 — Quad + Pull', 1, 7], ['Day 2 — Push + Isolation', 1, 7], ['Day 3 — Full body top-up', 1, 8],
+      ['Day 1, Quad + Pull', 1, 7], ['Day 2, Push + Isolation', 1, 7], ['Day 3, Full body top-up', 1, 8],
     ]);
     expect(res.body.items[0]!.exercises[0]!.exercise.name).toBe(EX.BACK_SQUAT);
   });
@@ -172,7 +172,7 @@ describe('Day 1 → sets → completion → volume → week 2', () => {
     expect(day1.omitted).toEqual([]);
     expect(day1.workout.week_number).toBe(1);
     expect(day1.workout.mesocycle_id).toBe(SEED_MESOCYCLE_ID);
-    expect(day1.template_name).toBe('Day 1 — Quad + Pull');
+    expect(day1.template_name).toBe('Day 1, Quad + Pull');
 
     const squat = byName(day1, EX.BACK_SQUAT);
     expect(day1.exercises[0]!.exercise.name).toBe(EX.BACK_SQUAT);

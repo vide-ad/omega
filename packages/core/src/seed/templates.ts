@@ -30,7 +30,7 @@ interface TplDef {
 
 const TEMPLATE_DEFS: TplDef[] = [
   {
-    n: 1, name: 'Day 1 — Quad + Pull', day_label: 'Saturday',
+    n: 1, name: 'Day 1, Quad + Pull', day_label: 'Saturday',
     rows: [
       { name: EX.BACK_SQUAT,          base_sets: 4, reps: [6, 8],   rir: 2, rest: 180, priority: true },
       { name: EX.WEIGHTED_CHIN_UP,    base_sets: 3, reps: [6, 8],   rir: 2, rest: 180, priority: true },
@@ -42,7 +42,7 @@ const TEMPLATE_DEFS: TplDef[] = [
     ],
   },
   {
-    n: 2, name: 'Day 2 — Push + Isolation', day_label: 'Sunday',
+    n: 2, name: 'Day 2, Push + Isolation', day_label: 'Sunday',
     rows: [
       { name: EX.LEG_PRESS,           base_sets: 4, reps: [8, 12],  rir: 2, rest: 180, priority: true },
       { name: EX.SEATED_LEG_CURL,     base_sets: 3, reps: [10, 12], rir: 1, rest: 120, priority: false },
@@ -54,7 +54,7 @@ const TEMPLATE_DEFS: TplDef[] = [
     ],
   },
   {
-    n: 3, name: 'Day 3 — Full body top-up', day_label: 'Wednesday',
+    n: 3, name: 'Day 3, Full body top-up', day_label: 'Wednesday',
     rows: [
       { name: EX.HACK_SQUAT,          base_sets: 3, reps: [8, 10],  rir: 2, rest: 180, priority: true, notes: 'Substitute: Bulgarian Split Squat' },
       { name: EX.WEIGHTED_CHIN_UP,    base_sets: 3, reps: [8, 10],  rir: 2, rest: 180, priority: true },

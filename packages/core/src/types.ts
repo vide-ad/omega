@@ -120,7 +120,7 @@ export type MesocycleStatus = 'planned' | 'active' | 'complete' | 'abandoned';
 
 export interface Mesocycle {
   id: string;
-  name: string;                       // "Return to training — block 1"
+  name: string;                       // "Return to training, block 1"
   start_date: string;                 // ISO date
   planned_weeks: number;              // e.g. 6
   deload_week: number;                // e.g. 6
@@ -140,7 +140,7 @@ export interface MesocycleWeek {
 
 export interface WorkoutTemplate {
   id: string;
-  name: string;                       // "Day 1 — Quad + Pull"
+  name: string;                       // "Day 1, Quad + Pull"
   day_label: string | null;           // "Saturday"
   order: number;
   version: number;                    // increment on edit; sessions reference a version
