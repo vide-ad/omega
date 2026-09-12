@@ -1,11 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import { MUSCLE_GROUP_KEYS } from '../types.js';
 import {
-  MUSCLE_GROUPS, SEED_CONSTRAINTS, SEED_EXERCISES, SEED_MUSCLE_CREDITS,
+  MUSCLE_GROUPS, SEED_CONSTRAINTS, SEED_EXERCISES, SEED_INJURY, SEED_MUSCLE_CREDITS,
   SEED_TEMPLATES, SEED_TEMPLATE_EXERCISES, VOLUME_TARGETS, buildSeedMesocycle,
 } from './index.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+describe('seed strings follow the house style (docs/HOUSE-STYLE.md)', () => {
+  // Seed data is app text. These strings land on the Today screen, the block view and the exercise
+  // detail page, so the same rules apply as to anything else David reads: no em dashes, no arrows,
+  // no semi-colon joining clauses, and no en dash used between words (between numbers it is a range).
+  const banned = /—|→|;\s|(?<=[A-Za-z)])\s–\s(?=[A-Za-z(])/;
+  const visible: Array<[string, string | null]> = [
+    ...SEED_TEMPLATES.flatMap((t): Array<[string, string | null]> => [[`template ${t.name}`, t.name], [`template ${t.name} day_label`, t.day_label]]),
+    ...SEED_EXERCISES.flatMap((e): Array<[string, string | null]> => [[`exercise ${e.name}`, e.name], [`exercise ${e.name} cues`, e.cues], ...e.aliases.map((a): [string, string | null] => [`exercise ${e.name} alias`, a])]),
+    ...MUSCLE_GROUPS.map((m): [string, string | null] => [`muscle ${m.key}`, m.display_name]),
+    [`injury`, SEED_INJURY.name],
+    [`injury notes`, SEED_INJURY.notes],
+    ...SEED_CONSTRAINTS.map((c): [string, string | null] => [`constraint ${c.id}`, c.note]),
+    [`mesocycle`, buildSeedMesocycle('2026-09-12').mesocycle.name],
+    [`mesocycle notes`, buildSeedMesocycle('2026-09-12').mesocycle.notes],
+  ];
+  it('no user-visible seed string carries banned punctuation', () => {
+    const offenders = visible.filter(([, v]) => v !== null && banned.test(v)).map(([k, v]) => `${k}: ${v}`);
+    expect(offenders).toEqual([]);
+  });
+  it('the four strings from issue 11 read as intended', () => {
+    expect(SEED_TEMPLATES.map((t) => t.name)).toEqual(['Day 1, Quad + Pull', 'Day 2, Push + Isolation', 'Day 3, Full body top-up']);
+    expect(buildSeedMesocycle('2026-09-12').mesocycle.name).toBe('Return to training, block 1');
+  });
+});
 
 describe('seed data integrity', () => {
   it('muscle groups cover the full taxonomy exactly once', () => {

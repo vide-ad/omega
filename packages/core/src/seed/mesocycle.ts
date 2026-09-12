@@ -12,7 +12,7 @@ export const SEED_MESOCYCLE_ID = '0000a001-0000-4000-8000-000000000001';
 export function buildSeedMesocycle(start_date: string): { mesocycle: Mesocycle; weeks: MesocycleWeek[] } {
   const mesocycle: Mesocycle = {
     id: SEED_MESOCYCLE_ID,
-    name: 'Return to training — block 1',
+    name: 'Return to training, block 1',
     start_date,
     planned_weeks: 6,
     deload_week: 6,
