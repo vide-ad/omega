@@ -97,6 +97,12 @@ Three follow-ups came out of that review, all server lane and all small.
     happen. See `docs/STRONG-IMPORT.md`. Do this in the same pull request as the importer, not before, so
     nothing is left with no starting weight at all.
 
+## Sequenced after the app works
+
+**Deep research into training science.** David ruled on 12 September that it comes after the three pages,
+not before. What the app captures is settled and progressive overload is settled. The research changes
+what the coach concludes, and the coach is later. Brief and reasoning in `docs/PROGRAMME.md`.
+
 ## Parked
 
 **`docs/PROGRAMME.md`**, the AI-designed programme and the coach write loop. David parked it on

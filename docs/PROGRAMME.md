@@ -9,6 +9,35 @@ Amendment A6, prescribed ramps, is safe to build because it changes what a templ
 is true wherever templates come from. Pages 1, 2 and 3 render whatever a programme produces and do not
 care how it was authored. The only thing this holds up is coach write access, which was gated anyway.
 
+## Sequencing, ruled by David on 12 September
+
+**The deep research into training science happens after the app works, not before.** Chalk recommended
+doing it first, on the grounds that every number in the engine is currently an unvalidated assumption.
+David overruled that, and he is right.
+
+His argument. What the app *captures* is settled and not worth researching: which exercise, how many sets,
+how many reps, how many reps left in the tank, whether it went to failure, whether it hurt, whether it was
+a warmup. Progressive overload as the governing principle is settled too. The research only changes what a
+*coach* concludes from that record, and the coach is layer four. He also has direct experience of losing
+months to research-first on North, which is a better reason than any argument from first principles.
+
+Two things chalk would add, neither of which changes the ruling.
+
+The engine's rules degrade gracefully, which is why deferring is safe. If it suggests 55 kg and David
+thinks 57.5, he logs 57.5 and the next prescription follows what he actually lifted. A wrong rule costs
+him one correction, not a training block. The one exception is the deload, which is structural: the app
+deloads because it is week 6 rather than because his performance says so, and a wrong deload costs a whole
+week. If that bites, making the calendar deload advisory is a small change.
+
+And the ordering actively improves the research. Every session logged between now and then is effort
+annotated, which nine years of Strong history is not. Research run after three months of real use has
+something to work against. Research run now would have the same effort-free data chalk already analysed.
+
+So the research keeps the brief David gave it, and waits: what does the evidence say about when to deload,
+how to progress effort, and how to return from a break.
+
+---
+
 David set this out on 12 September 2026, and it reframes what the app is for. Recording it because the
 original spec described a training log with a progression engine bolted on, and that is not the product.
 
