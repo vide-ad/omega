@@ -47,7 +47,7 @@ describe('screens render', () => {
     const ex: WorkoutExerciseDetail = {
       workout_exercise: {
         id: 'we1', workout_id: 'w1', exercise_id: 'e1', order: 1, target_sets: 3, target_rep_low: 15, target_rep_high: 15,
-        target_rir: 1, suggested_weight_kg: 5, rest_seconds: 90, notes: null, target_reps_by_set: null, target_tempo: '3-0-3-0',
+        target_rir: 1, suggested_weight_kg: 5, rest_seconds: 90, notes: null, target_reps_by_set: null, target_tempo: '3-0-3-0', constraint_max_weight_kg: 5,
         last_set_amrap: true, reason: 'first_time', rationale: 'No qualifying history yet. Injury constraint applies: starting at the 5 kg cap.',
         flags: ['constrained'], constraint_notes: ['Rehab phase. Seated only.'], based_on_workout_id: null, is_compromised: false,
       },

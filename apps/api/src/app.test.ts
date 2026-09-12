@@ -201,6 +201,11 @@ describe('Day 1 → sets → completion → volume → week 2', () => {
     expect(curl.workout_exercise.target_tempo).toBe('3-0-3-0');
     expect(curl.workout_exercise.constraint_notes).toHaveLength(1);
     expect(curl.workout_exercise.rationale).toContain('no more than 5 kg');
+    // A5: the cap as a number, on the stored row and on the standalone prescription, and null elsewhere.
+    expect(curl.workout_exercise.constraint_max_weight_kg).toBe(5);
+    expect(curl.prescription?.constraint_max_weight_kg).toBe(5);
+    expect(bench.workout_exercise.constraint_max_weight_kg).toBeNull();
+    expect(squat.prescription?.constraint_max_weight_kg).toBeNull();
   });
 
   it('week 1 target_sets equal the template base_sets', async () => {

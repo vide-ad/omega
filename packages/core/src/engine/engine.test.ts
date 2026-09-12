@@ -529,7 +529,8 @@ describe('progression §5.5', () => {
       expect(first.prescription.flags).toContain('constrained');
       expect(first.prescription.constraint_notes).toEqual(['Rehab phase.']);
       expect(first.prescription.omit).toBe(false);
-      // The cap is the one limit with no field of its own, so it has to be in the words David reads.
+      // A5: the cap travels as a number as well as in the words David reads.
+      expect(first.prescription.constraint_max_weight_kg).toBe(5);
       expect(first.prescription.rationale).toContain('no more than 5 kg');
       expect(first.prescription.rationale).toContain('at least 15 reps');
       expect(first.prescription.rationale).toContain('3-0-3-0');
@@ -556,6 +557,25 @@ describe('progression §5.5', () => {
       expect(raised.prescription.reason).toBe('constrained');
       expect(raised.prescription.suggested_weight_kg).toBeNull();
       expect(raised.prescription.rationale).toContain('no more than 6 kg');
+      expect(raised.prescription.constraint_max_weight_kg).toBe(6);
+    });
+
+    it('the cap field is the lowest across every constraint that applies, and null when none sets one', () => {
+      const two = [c({ id: 'a', movement_pattern: 'elbow_flexion', max_weight_kg: 8 }), c({ id: 'b', exercise_id: 'curl', max_weight_kg: 5, min_reps: 15 })];
+      const folded = prescribe({ ...curlBase, constraints: two, history: [] });
+      expect(folded.prescription.constraint_max_weight_kg).toBe(5);
+      // A note-only constraint stops the engine but sets no cap.
+      const noteOnly = prescribe({ ...base, constraints: [c({ exercise_id: 'bench', note: 'Seated only.' })], history: [] });
+      expect(noteOnly.prescription.reason).toBe('constrained');
+      expect(noteOnly.prescription.constraint_max_weight_kg).toBeNull();
+      // Pending clearance still shows the cap, because the limits are the limits while the gate is shut.
+      const gated = prescribe({ ...base, constraints: [c({ movement_pattern: 'vertical_pull', requires_clearance: true, max_weight_kg: 10 })], history: [] });
+      expect(gated.prescription.reason).toBe('requires_clearance');
+      expect(gated.prescription.constraint_max_weight_kg).toBe(10);
+      // Blocked omits the exercise, and nothing constrains what is not in the session.
+      const blocked = prescribe({ ...base, constraints: [c({ exercise_id: 'bench', blocked: true, max_weight_kg: 10 })], history: [] });
+      expect(blocked.prescription.omit).toBe(true);
+      expect(blocked.prescription.constraint_max_weight_kg).toBeNull();
     });
 
     it('a note-only constraint still stops the engine and says so plainly', () => {
@@ -577,6 +597,7 @@ describe('progression §5.5', () => {
       expect(r.prescription.reason).toBe('progress_load');
       expect(r.prescription.suggested_weight_kg).toBe(45);
       expect(r.prescription.flags).not.toContain('constrained');
+      expect(r.prescription.constraint_max_weight_kg).toBeNull();
     });
   });
 

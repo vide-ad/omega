@@ -219,7 +219,8 @@ export function derivedStalls(doneNewestFirst: readonly SessionAnalysis[]): numb
 //        C5 any < L.rep_low in L AND in L' → regress_load (−10%, stalls+1)
 //        C6 otherwise → progress_reps (+1 per unit, capped at T.rep_high)
 //        C7 M ≠ L (most recent done session non-qualifying) → relabel repeat_after_compromised, stalls untouched
-//   D  constraint display for A2 and A3: rep floor, tempo, notes, flag constrained. No weight is computed
+//   D  constraint display for A2 and A3: rep floor, tempo, the cap as a field (A5), notes, flag constrained.
+//      No weight is computed
 //   E  stall_review when stalls ≥ 3
 // L = most recent qualifying done session; L' = the qualifying one before it; M = most recent done session.
 // Performance is judged against L's OWN stored targets; the output uses the current template + week.
@@ -383,12 +384,14 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
   // constrained exercise, so there is nothing to clamp. The rep floor, the tempo and the physio note
   // are carried through as information about the limit, not as a prescription.
   let target_tempo: string | null = null;
+  let constraint_max_weight_kg: number | null = null;
   if (input.constraints.length > 0 && !env.blocked) {
     if (env.min_reps !== null) {
       if (rep_low < env.min_reps) rep_low = env.min_reps;
       if (rep_high < rep_low) rep_high = rep_low;
     }
     if (env.required_tempo) target_tempo = env.required_tempo;
+    constraint_max_weight_kg = env.max_weight_kg;   // A5: the cap as a number, not only as prose
     flags.push('constrained');
   }
 
@@ -410,6 +413,7 @@ export function prescribe(input: PrescribeInput): PrescribeResult {
     target_rir,
     target_reps_by_set: byset,
     target_tempo,
+    constraint_max_weight_kg,
     last_set_amrap,
     reason,
     rationale,

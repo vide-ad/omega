@@ -18,7 +18,7 @@ function detail(): WorkoutDetail {
       workout_exercise: {
         id: WEID, workout_id: WID, exercise_id: 'e1', order: 1, target_sets: 3, target_rep_low: 8, target_rep_high: 10,
         target_rir: 2, suggested_weight_kg: 42, rest_seconds: 150, notes: null,
-        target_reps_by_set: null, target_tempo: null, last_set_amrap: false, reason: 'first_time', rationale: null,
+        target_reps_by_set: null, target_tempo: null, constraint_max_weight_kg: null, last_set_amrap: false, reason: 'first_time', rationale: null,
         flags: [], constraint_notes: [], based_on_workout_id: null, is_compromised: false,
       },
       exercise: {
