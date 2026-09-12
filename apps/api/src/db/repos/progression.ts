@@ -36,6 +36,11 @@ export function upsertState(db: Db, s: ProgressionState): void {
 }
 
 /** Seed helper: creates the starting-load row only when none exists, so re-seeding never overwrites a live working weight. */
+/** Drops the cache row so the next refresh rebuilds it from history alone, with no starting load. */
+export function deleteState(db: Db, exerciseId: string): boolean {
+  return db.run('DELETE FROM progression_state WHERE exercise_id = $id', { id: exerciseId }).changes > 0;
+}
+
 export function insertStartingLoadIfAbsent(db: Db, exerciseId: string, workingWeightKg: number, updatedAt: string): boolean {
   return db.run(`INSERT INTO progression_state (${S_COLS}) VALUES ($exercise_id, $working_weight_kg, NULL, NULL, NULL, 0, $updated_at)
     ON CONFLICT(exercise_id) DO NOTHING`, { exercise_id: exerciseId, working_weight_kg: workingWeightKg, updated_at: updatedAt }).changes > 0;

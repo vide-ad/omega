@@ -12,7 +12,8 @@
     "test": "vitest run",
     "seed": "tsx src/cli/seed.ts",
     "migrate": "tsx src/cli/migrate.ts",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "import:strong": "tsx src/cli/import-strong.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",

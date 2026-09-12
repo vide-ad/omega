@@ -119,8 +119,10 @@ The rulebook is `docs/ENGINE-RULES.md`. `POST /workouts` builds, per template ex
   `id/date/is_compromised/completed_at`, and the row's stored `target_*`, `reason`, `is_compromised`;
 - `constraints` = `activeConstraintsFor(exercise, allConstraints, injuries)`;
 - `week` = the active mesocycle's week for `date` (null outside a block);
-- `starting_load_kg` = `progression_state.working_weight_kg` if a row exists (seeded from §9.5 restart loads, or set when the user
-  enters a starting load in-app), else null;
+- `starting_load_kg` = `progression_state.working_weight_kg` if a row exists **and the exercise has no history at all**, else null.
+  Once any session exists, stage C1 reads the most recent one and names its date, which is better evidence than a number the
+  cache echoed back from its own last run. Nothing seeds this value any more (issue 12, the spec's restart loads were
+  transcribed guesses that would have overridden imported history), so today it is only ever the engine's own cache;
 - `today` = the workout date.
 
 It stores the prescription fields on the `workout_exercises` row and upserts `progression_state` with `next_state`.
