@@ -163,6 +163,21 @@ button{font-family:inherit; color:inherit; cursor:pointer; border:0; background:
 }
 .ramp .lab{font-family:var(--f); font-size:var(--t-11); color:var(--iron-550);
   text-transform:uppercase; letter-spacing:.06em; font-weight:700}
+
+/* A prescribed ramp (amendment A6). Brass, because the engine is still speaking. */
+.plan{display:flex; gap:5px; margin-top:9px}
+.plan .s{
+  flex:1; background:var(--iron-850); border-radius:var(--r-sm); padding:7px 4px;
+  text-align:center; border:1px solid transparent;
+}
+.plan .s.top{border-color:var(--brass)}
+.plan .n{display:block; font-size:var(--t-11); color:var(--iron-550); font-weight:700;
+  letter-spacing:.05em; text-transform:uppercase}
+.plan .w{display:block; font-family:var(--f-num); font-size:var(--t-15); font-weight:600;
+  color:var(--chalk-2); margin-top:2px; font-variant-numeric:tabular-nums}
+.plan .s.top .w{color:var(--brass)}
+.plan .r{display:block; font-family:var(--f-num); font-size:var(--t-11); color:var(--chalk-3)}
+.plan-note{font-size:var(--t-11); color:var(--chalk-3); margin-top:5px}
 .script .reason{
   font-size:var(--t-11); font-weight:700; letter-spacing:.07em; text-transform:uppercase;
   color:var(--brass);
@@ -416,32 +431,44 @@ button{font-family:inherit; color:inherit; cursor:pointer; border:0; background:
       <hr class="divide">
 
       <div class="note">
-        <h3><span class="n">06</span> The pyramid problem, which is bigger than a sub-line</h3>
-        <p>I checked every exercise-session you logged in the last 12 months. You use the same weight for
-        every set only <strong>36%</strong> of the time. The rest is ascending (27%), descending (16%), or
-        up and down (21%). Omega prescribes exactly one weight per exercise, so it is modelling a way of
-        training you use barely a third of the time.</p>
-        <p>One thing takes the sting out. Your bench on 31 August was 40, 50, 52.5, 52.5, which is not a
-        programmed pyramid, it is you working up to a top set with the first sets acting as unmarked
-        warmups. The engine already reads that correctly, because it takes the most common working weight
-        rather than an average, so it sees 52.5 and not 48.75.</p>
-        <p>So the new <em>Last time</em> line under the prescription shows your actual ramp. You log
-        whatever you lift, the engine keeps reading the top set, and nothing has to change underneath.</p>
-        <p class="ask-you"><strong>The open question.</strong> Is that enough, or do you want the engine to
-        actually prescribe a ramp, a weight per set? That is a real change to how progression works, since
-        the rule for moving up a flat weight does not obviously apply to a pyramid. I would rather try the
-        display version first and change the engine only if it turns out not to be enough.</p>
+        <h3><span class="n">06</span> Prescribed ramps, now built and now amendment A6</h3>
+        <p>I had this wrong and you corrected it. I read the 64% of your sessions with varying weights as
+        evidence of how you like to train. You told me those pyramids come from injury, tiredness and
+        laziness. So the requirement was never to match your history, it is that a programme designed
+        upstream may call for a ramp and the app has to be able to prescribe one. Default stays flat.</p>
+        <p>Open the Leg Extension for a reverse pyramid and the Barbell Back Squat for an ascending one.
+        The engine still decides exactly one number, the top working weight, by the rules it already has.
+        The ramp is applied after, and the outlined set is the one the engine judges for progression.
+        That last part is the only genuinely new rule, because "did every set reach the top of the rep
+        range" is the wrong question to ask a set prescribed at 70%.</p>
+        <p class="ask-you"><strong>One thing rendering it exposed.</strong> The Leg Extension moves in
+        5 kg steps, so 90% and 80% of 30 kg both round to 25 kg and two of the three sets are identical.
+        Percentages lose resolution on light weights and on coarse machines. That is an argument for
+        letting a programme specify a ramp in kilograms instead, which I have left open in the amendment
+        rather than deciding for you.</p>
       </div>
 
       <hr class="divide">
 
       <div class="note">
-        <h3><span class="n">07</span> The notes file, where I need you to confirm I have you right</h3>
-        <p class="ask-you">My reading of what you asked for: a markdown file per exercise, holding the cues
-        and the reasoning for why it is in your programme, which the coach can read and rewrite, and which
-        you see in the app alongside the engine's own "Why this?". Two layers, one from the engine about
-        this session's numbers, one from the coach about the exercise itself. Confirm or correct me and I
-        will write the contract, because it is a new feature rather than a screen change.</p>
+        <h3><span class="n">07</span> What you described is the architecture, so I wrote it down</h3>
+        <p>You said the point of the app is research, then an AI designing a programme from it and your
+        preferences, then that feeding the app. That is a different product from the one the original
+        spec described, which was a log with a progression engine attached. It is now
+        <code>docs/PROGRAMME.md</code>.</p>
+        <p>Three of your four layers already exist. The record is the database and the API. The
+        deterministic progressive overload is the engine, and it stays deterministic on purpose, because a
+        model that improvises the weight on the bar cannot be tested, explained afterwards, or trusted
+        near an injury. The coach reading both is already there in the API.</p>
+        <p>Two do not. The programme has no file, it lives in database rows seeded from a TypeScript
+        source, so there is nothing for an AI to revise and nothing you would want to read. And the coach
+        still has no write access, which is the gate that was always going to matter, and your layer four
+        is exactly what it was built for.</p>
+        <p class="ask-you"><strong>My recommendation, and it is your call.</strong> The markdown file is
+        the authoring surface, not the live source. A command compiles it into the rows the app runs on.
+        The reason is the failure mode: parsed live, one bad line breaks a session while you are standing
+        under a loaded bar. Compiled, a bad edit fails with a message and the last good programme keeps
+        running.</p>
       </div>
 
     </div>
@@ -456,6 +483,8 @@ button{font-family:inherit; color:inherit; cursor:pointer; border:0; background:
 const EX = [
   { id:'squat', name:'Barbell Back Squat', sets:3, lo:6, hi:8, rir:3, rest:180, incr:2.5,
     weight:27.5, reason:'add load', done:3, mode:'chips',
+    set_ramp:[70,85,100],
+    ramp_note:'Your programme asks you to work up. Set 3 is the one the engine judges.',
     rationale:'Last qualifying session 31 August: 25 kg for 8, 8, 8 reps at effort 3 (target 3, range 6 to 8). Every set reached the top of the range with effort in hand, so add 2.5 kg to make 27.5 kg and reset to 6 reps.',
     logged:[{w:27.5,r:8,rir:3},{w:27.5,r:8,rir:2},{w:27.5,r:7,rir:2}] },
 
@@ -469,6 +498,8 @@ const EX = [
 
   { id:'legext', name:'Leg Extension', sets:3, lo:10, hi:12, rir:3, rest:120, incr:5,
     weight:30, reason:'consolidate', done:0, mode:'chips',
+    set_ramp:[100,90,80],
+    ramp_note:'Your programme asks for a reverse pyramid here. Set 1 is the one the engine judges.',
     rationale:'Last qualifying session 31 August: 30 kg for 12, 12, 12 reps at effort 2 (target 3, range 10 to 12). Reps are there but effort 2 is under the target 3, so hold 30 kg and the same reps until it drops.' },
 
 
@@ -497,9 +528,14 @@ const EX = [
 ];
 
 const S = {};
+function rampWeight(e, setIdx){
+  if (!e.set_ramp || e.weight === null) return e.weight;
+  const pct = e.set_ramp[Math.min(setIdx, e.set_ramp.length - 1)];
+  return Math.round((e.weight * pct / 100) / e.incr) * e.incr;
+}
 EX.forEach(e => S[e.id] = {
   logged: (e.logged || []).map(x => ({...x})),
-  weight: e.weight === null ? (e.limits && e.limits.cap ? e.limits.cap : 0) : e.weight,
+  weight: e.weight === null ? (e.limits && e.limits.cap ? e.limits.cap : 0) : rampWeight(e, (e.logged||[]).length),
   reps: e.lo,
   warm:false, amrap:false, pain:false, why:false,
 });
@@ -565,6 +601,22 @@ function render(){
           <span class="shape">${e.sets} sets, effort ${e.rir}</span>
         </span>
       </div>`));
+    if (e.set_ramp) {
+      // A6: the engine still decides ONE number, the top working weight. The ramp is a
+      // transform applied after, and the engine judges only the sets at the top percentage.
+      const top = Math.max(...e.set_ramp);
+      const strip = el('<div class="plan"></div>');
+      e.set_ramp.forEach((pct, i) => {
+        const w = Math.round((e.weight * pct / 100) / e.incr) * e.incr;
+        strip.appendChild(el(`<div class="s ${pct===top?'top':''}">
+            <span class="n">Set ${i+1}</span>
+            <span class="w">${kg(w)}</span>
+            <span class="r">${pct}%</span>
+          </div>`));
+      });
+      body.appendChild(strip);
+      body.appendChild(el(`<div class="plan-note">${e.ramp_note}</div>`));
+    }
     if (e.ramp) {
       body.appendChild(el(`<div class="ramp">
           <span class="lab">Last time</span>
@@ -700,6 +752,8 @@ function commit(e, rir){
   const wasWarm = st.warm;
   st.warm = false; st.amrap = false; st.pain = false;
   st.reps = e.lo;
+  const nextIdx = st.logged.filter(x => !x.warm).length;
+  if (e.set_ramp && e.weight !== null) st.weight = rampWeight(e, nextIdx);
 
   const n = st.logged.filter(x => !x.warm).length;
   if (!wasWarm && n >= e.sets) {

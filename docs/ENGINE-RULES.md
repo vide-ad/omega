@@ -149,6 +149,33 @@ Never a silent edit. Every change to a rule is numbered here with its reason.
 | A3 | 8 Sep 2026 | deviation table split into forced and chosen; chosen ones go to David | wren's review: a document chalk wrote was overriding one David commissioned without his consent |
 | A4 | 8 Sep 2026 | a constraint stops the engine (new A3) instead of clamping its answer (old stage D); no weight is prescribed for a constrained exercise | David's ruling on P1. This restores his spec 5.2 and 5.3 and removes the clamp arithmetic entirely |
 | A5 | 9 Sep 2026 | `Prescription.constraint_max_weight_kg`, the folded cap, carried as a field rather than only inside the rationale prose | flint on PR #4. A4 left the cap as the only number David gets for a constrained exercise, and it existed nowhere but an English sentence, so the session screen could not render it without parsing prose |
+| A6 | 12 Sep 2026 | prescribed ramps. `TemplateExercise.set_ramp` and `Prescription.target_weight_by_set`, both null by default, meaning a flat weight across all sets as today | David's ruling. A programme designed upstream may call for a pyramid or a reverse pyramid, and the engine could only ever prescribe one weight. Default stays flat because most training is flat and a ramp is a deliberate choice |
+
+### A6 in full, because it is the first amendment that changes what a template can say
+
+`TemplateExercise.set_ramp: number[] | null`. Percentages of the top working weight, one per set, in set
+order. Null means flat, which is the default and what every existing template does. An ascending pyramid
+is `[70, 85, 100]`. A reverse pyramid is `[100, 90, 80]`. Length mismatches against `target_sets` are
+resolved by repeating the last entry, so a ramp survives the mesocycle set ramp adding a set.
+
+The engine still decides exactly one number, the top working weight, by the existing stage C rules. The
+ramp is applied afterwards, in stage D, as a transform: each set's weight is the top weight times its
+percentage, rounded to the exercise's increment. Nothing in stages A, B or C changes, which is the point.
+`Prescription.target_weight_by_set` carries the result and stays null when there is no ramp.
+
+**The one genuinely new rule is which sets the engine judges.** Progression currently asks whether every
+set reached the top of the rep range. Under a ramp that question is wrong, because a set at 70% is not
+trying to. So: **the engine judges the sets prescribed at the highest percentage in the ramp, and ignores
+the rest.** For `[70, 85, 100]` that is the last set. For `[100, 90, 80]` it is the first. For flat, it is
+all of them, which is today's behaviour and why this generalises rather than special-cases.
+
+Volume is not affected. A ramp set is still a set that happened, and the existing hard-set rule decides
+whether it counts, exactly as it does for any other set. Marking a ramp set as a warmup stays the user's
+call and still excludes it from both volume and progression.
+
+Open and not settled: whether `set_ramp` should also be expressible in absolute kilograms rather than
+percentages. Percentages progress by themselves when the top set moves, which is why they are the
+proposal, but a fixed-increment ramp is a thing some programmes specify.
 
 A note on the two meanings of the word constrained, since A4 gave it a second job. `constrained` is now both a
 reason and a flag. The reason says why there is no weight. The flag says limits apply. A prescription with

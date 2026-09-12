@@ -65,16 +65,15 @@ Decisions already made that bind this page.
 
 Two open questions on this page, both raised by David on 12 September.
 
-- **Per-set weights.** He varies the weight across sets in 64% of his exercise-sessions (27% ascending,
-  16% descending, 21% up and down, against 36% flat), and the engine prescribes exactly one weight.
-  The mockup answers it by displaying last time's actual ramp, which costs nothing, and the engine keeps
-  reading the modal working weight, which already handles his real pattern of working up to a top set.
-  Whether the engine should prescribe a ramp is undecided and it is a real amendment if so, because the
-  rule for advancing a flat weight does not generalise to a pyramid.
-- **Coach-written exercise notes.** David asked for a markdown file per exercise holding cues and the
-  reasoning for why it is in the programme, readable and editable by the coach, shown alongside the
-  engine's own rationale. Chalk's reading of the scope is awaiting his confirmation before it gets a
-  contract. It is a new feature, not a screen change.
+- **Prescribed ramps are now settled and are amendment A6.** Chalk read David's 64% of varied-weight
+  sessions as evidence of how he likes to train. David corrected that on 12 September: those pyramids
+  come from injury, tiredness and laziness, not intent. The requirement is not to match his history, it
+  is that a programme designed upstream may call for a pyramid or a reverse pyramid, and the app has to
+  be able to prescribe one. Default is flat. This page shows `target_weight_by_set` as a per-set list
+  when a ramp is prescribed, and the plain single number when it is not.
+- **The programme file is now `docs/PROGRAMME.md`**, and it is bigger than the exercise notes chalk
+  first read it as. It is the source of what is in a session at all, written by an AI from training
+  research and David's preferences, and revised by the coach. This page renders whatever it produces.
 
 **2. Today.** Not started.
 The landing screen. What block and week you are in, which routines you can start, and a resume card if a session
