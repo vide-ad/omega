@@ -29,7 +29,7 @@ try {
   const s = seedDatabase(db, { start_date: start });
   console.log(`[seed] ${path}`);
   console.log(`[seed] mesocycle start ${s.mesocycle_start} (${s.mesocycle_start_source.replace('_', ' ')})`);
-  console.log(`[seed] ${s.exercises} exercises, ${s.credits} muscle credits, ${s.templates} templates (${s.template_exercises} slots), ${s.starting_loads_inserted} starting loads inserted`);
+  console.log(`[seed] ${s.exercises} exercises, ${s.credits} muscle credits, ${s.templates} templates (${s.template_exercises} slots)`);
 } finally {
   db.close();
 }

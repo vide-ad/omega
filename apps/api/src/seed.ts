@@ -6,7 +6,7 @@
  *  - a granted constraint clearance is never revoked.
  */
 import {
-  MUSCLE_GROUPS, SEED_CONSTRAINTS, SEED_EXERCISES, SEED_INJURY, SEED_MESOCYCLE_ID, SEED_MUSCLE_CREDITS, SEED_RESTART_LOADS,
+  MUSCLE_GROUPS, SEED_CONSTRAINTS, SEED_EXERCISES, SEED_INJURY, SEED_MESOCYCLE_ID, SEED_MUSCLE_CREDITS,
   SEED_TEMPLATES, SEED_TEMPLATE_EXERCISES, VOLUME_TARGETS, addDays, buildSeedMesocycle, formatDate,
 } from '@omega/core';
 import type { Db } from './db/connection.js';
@@ -26,7 +26,6 @@ export interface SeedSummary {
   credits: number;
   templates: number;
   template_exercises: number;
-  starting_loads_inserted: number;
 }
 
 /** The next Saturday on or after `date` (YYYY-MM-DD, UTC). */
@@ -68,10 +67,9 @@ export function seedDatabase(db: Db, opts: SeedOptions = {}): SeedSummary {
     repo.upsertInjury(db, SEED_INJURY);
     for (const c of SEED_CONSTRAINTS) repo.upsertConstraint(db, c);
 
-    let inserted = 0;
-    for (const s of SEED_RESTART_LOADS) {
-      if (repo.insertStartingLoadIfAbsent(db, s.exercise_id, s.working_weight_kg, nowIso)) inserted++;
-    }
+    // No seeded starting loads (issue 12). The spec's restart numbers were transcribed guesses, and in
+    // stage C1 a starting load wins over the most recent real session, so a seeded one would have
+    // overridden the imported Strong history. Exercises with no history read "set a starting load".
 
     return {
       mesocycle_start: start,
@@ -80,7 +78,6 @@ export function seedDatabase(db: Db, opts: SeedOptions = {}): SeedSummary {
       credits: SEED_MUSCLE_CREDITS.length,
       templates: SEED_TEMPLATES.length,
       template_exercises: SEED_TEMPLATE_EXERCISES.length,
-      starting_loads_inserted: inserted,
     };
   });
 }

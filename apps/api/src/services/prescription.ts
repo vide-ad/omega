@@ -54,9 +54,11 @@ export function prescribeFor(db: Db, o: PrescribeForOptions): PrescribeResult {
     week: o.week,
     history: o.history,
     constraints: constraintsFor(o.exercise, o.cc),
-    // A cached working weight of 0 means "never established" (the engine's own fallback), not
-    // "start at 0 kg" — an exercise with no history must still prompt for a starting load.
-    starting_load_kg: state && state.working_weight_kg > 0 ? state.working_weight_kg : null,
+    // The cache is only a starting load for an exercise with no history at all. Once a session exists,
+    // stage C1 reads the most recent one and names its date, which is better evidence than a number
+    // the cache echoed back from its own last run. A cached 0 means "never established", not "start at
+    // 0 kg", so an exercise with no history still prompts for a starting load.
+    starting_load_kg: o.history.length === 0 && state && state.working_weight_kg > 0 ? state.working_weight_kg : null,
     today: o.today,
   });
 }

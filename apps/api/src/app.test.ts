@@ -13,6 +13,7 @@ import { createApp } from './app.js';
 import { Db } from './db/connection.js';
 import { DEFAULT_MIGRATIONS_DIR as MIGRATIONS_DIR, runMigrations } from './db/migrate.js';
 import type { Env } from './routes/shared.js';
+import * as repo from './db/repos/index.js';
 import { seedDatabase } from './seed.js';
 
 const WRITE = 'test-write-token-0123456789';
@@ -182,9 +183,12 @@ describe('Day 1 → sets → completion → volume → week 2', () => {
     expect(squat.prescription?.reason).toBe('first_time');
     expect(squat.previous).toBeNull();
 
+    // Issue 12: the seed no longer writes the spec's 42 kg restart guess, so with no history the bench
+    // asks for a starting load like everything else. The Strong import is what supplies real history.
     const bench = byName(day1, EX.BENCH);
     expect(bench.workout_exercise.reason).toBe('first_time');
-    expect(bench.workout_exercise.suggested_weight_kg).toBe(42.5);
+    expect(bench.workout_exercise.suggested_weight_kg).toBeNull();
+    expect(bench.workout_exercise.rationale).toContain('Set a starting load');
 
     const chin = byName(day1, EX.WEIGHTED_CHIN_UP);
     expect(chin.workout_exercise.reason).toBe('requires_clearance');
@@ -310,7 +314,8 @@ describe('Day 1 → sets → completion → volume → week 2', () => {
     expect(detail.body.history[0]!.prescription?.reason).toBe('first_time');
     const list = await call<{ items: Array<{ exercise: { id: string } }> }>(app, 'GET', '/progression');
     expect(list.body.items.map((i) => i.exercise.id)).toContain(ex(EX.BENCH));
-    expect(list.body.items.map((i) => i.exercise.id)).toContain(ex(EX.MACHINE_CURL)); // state row only
+    // No seeded state rows any more (issue 12), so an exercise with no history is not listed.
+    expect(list.body.items.map((i) => i.exercise.id)).not.toContain(ex(EX.MACHINE_CURL));
   });
 
   it('a second Day 1 a week later is week 2: bench progress_load 45, squat 5 sets', async () => {
@@ -636,7 +641,6 @@ describe('rir_observed (amendment A1)', () => {
       const first = await call<WorkoutDetail>(app, 'POST', '/workouts', { template_id: DAY1, date: '2026-09-12' });
       const wid = first.body.workout.id;
       const bench = byName(first.body, EX.BENCH).workout_exercise;
-      expect(bench.suggested_weight_kg).toBe(42.5);
       expect(bench.target_rir).toBe(3);
       // Three sets at the top of the range, reporting exactly the target effort.
       for (const i of [1, 2, 3]) {
@@ -700,13 +704,14 @@ describe('mesocycles, cardio, injuries', () => {
 });
 
 describe('seed is idempotent', () => {
-  it('re-seeding keeps the block start and does not reset a working weight', () => {
+  it('re-seeding keeps the block start and does not touch a cached working weight', () => {
     const { db } = makeApp();
-    db.run('UPDATE progression_state SET working_weight_kg = 50 WHERE exercise_id = $id', { id: ex(EX.BENCH) });
+    // Issue 12: the seed writes no starting loads any more, so a fresh database has no cache rows.
+    expect(db.get<{ c: number }>('SELECT count(*) AS c FROM progression_state')?.c).toBe(0);
+    repo.upsertState(db, { exercise_id: ex(EX.BENCH), working_weight_kg: 50, baseline_e1rm: null, baseline_set_id: null, last_progressed_at: null, consecutive_stalls: 0, updated_at: '2026-09-13T12:00:00.000Z' });
     const s = seedDatabase(db);
     expect(s.mesocycle_start).toBe(START);
     expect(s.mesocycle_start_source).toBe('existing');
-    expect(s.starting_loads_inserted).toBe(0);
     expect(db.get<{ w: number }>('SELECT working_weight_kg AS w FROM progression_state WHERE exercise_id = $id', { id: ex(EX.BENCH) })?.w).toBe(50);
     expect(db.get<{ c: number }>('SELECT count(*) AS c FROM exercises')?.c).toBeGreaterThan(30);
     const moved = seedDatabase(db, { start_date: '2026-09-19' });
