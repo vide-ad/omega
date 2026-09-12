@@ -26,6 +26,11 @@ work unless it says so.
 
 ## The spine. Everything needed to train.
 
+David chose on 12 September to wait for Flutter rather than deploy the PWA and train on it meanwhile. So these
+three pages are the MVP. Until all three exist he cannot log a single session in Omega and he keeps using
+Strong, which means page one landing alone changes nothing for him. Build them in this order, but treat the
+three as one milestone.
+
 **1. Active session.** Not started. *This is page one and the whole app is judged on it.*
 The screen you hold between sets. Shows each exercise with what the engine suggests and why, your numbers from
 last time, and a row per set to log weight, reps, effort and pain. Auto-starts the rest timer when you log a set.
@@ -62,6 +67,8 @@ Writes `POST /workouts` to start one.
 Server address and token, and a test button. Small, but nothing works without it. Reads `GET /api/health` and
 `GET /mesocycles/current` to prove the token. Worth building as a rough stub early so pages 1 and 2 can be
 reached on a real phone, then polishing it properly in its turn.
+This page is also what makes the droplet hostname urgent again. Flutter reaches the API over HTTPS exactly as
+the PWA would have, so the hostname is still on the critical path, just a week or two out rather than today.
 
 ---
 
@@ -147,8 +154,8 @@ with us writing page specs.
 **Strong import.** Specified in `docs/STRONG-IMPORT.md` against David's real export. Server side, a command
 line tool rather than a page.
 
-**Apple Health cardio.** An Apple Shortcut posting to `POST /cardio` on the interim app. Flutter can read
-HealthKit directly, which is a reason it exists, but it is not a page and it is not early.
+**Apple Health cardio.** Flutter reads HealthKit directly, which is one of the reasons David chose it. Not a
+page, and not early.
 
 **Coach approvals.** The gate on ever giving the coach write access. Server side, when you want the coach
 writing rather than just reading.

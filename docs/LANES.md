@@ -24,7 +24,7 @@ coder. This page stays the authoritative list of who owns what.
 
 | Lane | Owns | One worktree each |
 |---|---|---|
-| **client** | `apps/flutter/**` (to be created), and `apps/web/**` while the PWA is the interim | `../omega-client` |
+| **client** | `apps/flutter/**` (to be created). `apps/web/**` is a frozen reference, see below | `../omega-client` |
 | **server** | `apps/api/**`, `packages/core/**`, `deploy/**`, the droplet | `../omega-server` |
 
 `docs/**`, `packages/core/src/api-types.ts`, `docs/API.md` and `docs/ENGINE-RULES.md` are chalk's. A change to
@@ -49,7 +49,7 @@ first, for wren's reason. It is the only item here that protects data from being
 1. **The effort test, with the explanatory line.** See `docs/ENGINE-RULES.md`, amendments A1 and A2. About an
    hour and fully specified. The tests must reproduce the four-row table in `docs/DESIGN-REVIEW.md`, with only
    row 1 changing. **Nothing precedes this.** It is the only item here that stops data being recorded wrongly,
-   and it matters from the moment the interim app is deployed. Server lane.
+   and it mattered from the moment any client was deployed. Server lane.
 2. **Constraints stop the engine (amendment A4).** David reversed chalk's clamp on 8 September. Delete stage D's
    weight arithmetic. Any active constraint on an exercise now gives reason `constrained` with
    `suggested_weight_kg` null, and the exercise stays in the session showing its cap, rep floor, tempo and physio
@@ -84,25 +84,27 @@ Three follow-ups came out of that review, all server lane and all small.
    stage D, stored on the `workout_exercises` row and served. Amendment A4 left the cap as the only number
    David gets for a constrained exercise and it lived only inside the rationale prose, so no client could
    render it without parsing English. Flint raised it on PR 4.
-9. **Make the effort chip log the set, in the interim PWA.** Rewritten on 11 September after David ruled on
-   page one, and it is now simpler than the version chalk first wrote. Remove the pre-fill in `defaultDraft`,
-   and make `RirChips.onChange` commit the set rather than only setting a value. `ChipRow` already renders a
-   null value as nothing selected and `SetRow` already has the submit handler, so this is a small change.
-   The tick stays for warmups and AMRAP sets. Guard the commit on the row validating, so a chip tapped before
-   the reps are typed sets the value without logging. `rir_observed` is then always true, because the only way
-   to log a working set is to answer. `RirNudge` shows an em dash for a null value, which the house style
-   rules out.
+9. **Withdrawn on 12 September.** This was the effort chip change in the interim PWA. David chose to wait for
+   Flutter rather than deploy the PWA, so no real session will ever be logged in it, and the change was
+   justified entirely by sessions that will not happen. Issue 10 is closed with the reasoning. The ruling
+   behind it stands and binds Flutter page one, where it is recorded in `docs/PAGES.md`.
 10. **House style in the seed data.** The three routine names, the mesocycle name and at least one exercise cue
     carry em dashes, and David reads all of them in the app. `packages/core/src/seed/templates.ts`,
     `mesocycle.ts` and `exercises.ts`.
+11. **Delete `SEED_RESTART_LOADS` once the Strong import lands.** Stage C1 checks the stored starting load
+    before the most recent session, so a seeded 42 kg bench overrides an imported 52.5 kg. His own logbook is
+    better evidence than a number transcribed from the spec, and the spec's premise of four weeks off did not
+    happen. See `docs/STRONG-IMPORT.md`. Do this in the same pull request as the importer, not before, so
+    nothing is left with no starting weight at all.
 
 ## Carried from the design review
 
-- Client: the three exercise-management flows (library, add mid-session, edit routine), where the API already
-  does all three. Send `rir_observed: false` unless the chip was touched, and render assumed and chosen
-  differently. Carry across the uplift (`docs/mockup/omega-uplift.html`). Demote readiness to a session-screen
-  toggle. Pass the on-device gate, meaning dark-only in direct sun and one real session with a pump, before M1
-  is called done.
+- Client, now all against Flutter rather than the frozen PWA: the three exercise-management flows (library,
+  add mid-session, edit routine), where the API already does all three. Carry across the uplift
+  (`docs/mockup/omega-uplift.html`). Demote readiness to a session-screen toggle. Pass the on-device gate,
+  meaning dark-only in direct sun and one real session with a pump, before the MVP is called done. The
+  `rir_observed` bullet is superseded by David's ruling of 11 September, since a working set cannot be logged
+  without an answer, so there is no assumed value to render differently.
 - Server: items 1 to 3 above.
 
 ## Branch and PR conventions

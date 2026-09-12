@@ -1,6 +1,15 @@
-# The client is Flutter. The PWA is a stopgap.
+# The client is Flutter. The PWA is a reference, not a stopgap.
 
-Decided 8 Sep by David. This supersedes the PWA-only reading in `docs/PLAN.md`.
+Decided 8 September by David. This supersedes the PWA-only reading in `docs/PLAN.md`.
+
+**Amended 12 September.** David chose to wait for Flutter rather than deploy the PWA and train on it
+meanwhile. So the PWA is no longer an interim client. It stays in the repository as a working reference,
+because it proves the API serves a real session end to end, and chalk drove it in a browser against a live
+server as verification. Nobody spends time improving it. It is not deployed, it logs no real training, and
+work proposed for it needs a reason that survives the question "who uses this".
+
+One consequence to hold on to. Until Flutter pages 1, 2 and 3 exist, David cannot log a session in Omega at
+all, and he keeps using Strong. That makes those three pages the real MVP boundary, not page one alone.
 
 ## The decision
 
