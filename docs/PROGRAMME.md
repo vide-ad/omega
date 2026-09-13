@@ -5,7 +5,8 @@ still working out how it should sit in a database. Nothing on this page is decid
 recommendation below, and nobody should treat it as a spec until he unparks it.
 
 **Chalk's proposed engineering answer is at the bottom of this page, written 13 September at David's
-request. It is a proposal awaiting his yes, not a decision.**
+request. It is a proposal awaiting his yes, not a decision. It was reviewed by GPT Astra on 13 September
+and revised as a result. Read the revision, not the original proposal above it.**
 
 **Parking it blocks nothing.** Flint's queue (issues 9, 11, 12 and the Strong importer) does not touch it.
 Amendment A6, prescribed ramps, is safe to build because it changes what a template can express and that
@@ -229,3 +230,119 @@ more than an engineering one and David will know the answer once he sees one.
 **Whether the coach should propose a whole document or a diff.** A whole document is far simpler to
 validate and to reason about. A diff is easier to review. Proposing whole documents and rendering the diff
 for review gets both, but rendering a useful markdown diff on a phone is real work.
+
+---
+
+# Second opinion, and the revision that came out of it
+
+David sent the proposal above to GPT Astra on 13 September. Astra's review was better than the proposal.
+Recorded here with the corrections accepted, the two places chalk pushed back with evidence, and what is
+now actually open.
+
+Astra stated up front that they could not see the repository, so several concerns are about behaviour that
+already exists. Those are answered below with code references rather than argument.
+
+## Four things chalk had wrong
+
+**1. File against database was a false dichotomy.** Chalk argued the programme must live in the database
+*rather than* a file, on the grounds that a remote coach has no filesystem. Astra separated authoring from
+runtime, which dissolves the argument entirely. Author in a file, wherever is convenient, including git.
+Import it through a restricted mechanism that validates it. Store the exact imported document and its
+compiled rows. After import that version is immutable, and a further file edit makes another proposal,
+not an edit. There is no synchronisation to reconcile because nothing syncs.
+
+This gets the convenient authoring chalk was arguing against and the runtime reliability chalk was
+arguing for. Astra's accompanying point stands on its own: git tells you what changed, and does not tell
+you which version a phone actually used. Version provenance is not something a commit gives you.
+
+**2. "A database suits the record and not the programme" is too strong, and chalk contradicted it in the
+same document.** The proposal argued markdown against database and then proposed markdown inside a
+database. A database stores a document perfectly well. The honest justification for markdown is David's
+stated preference to read and revise a whole document, which is a real requirement and did not need a
+fabricated technical one propping it up.
+
+**3. A genuine contradiction about prose.** The proposal said prose is stored verbatim and never parsed,
+*and* that per-exercise prose is displayed in the app as the reason that exercise is there. Both cannot be
+true, because associating a paragraph with an exercise is parsing. Astra's fix is taken: **exercise
+rationale is an explicit field on that exercise**, and surrounding prose is for the programme's overall
+reasoning and is genuinely never interpreted.
+
+Also taken: **one designated yaml block holding the whole executable programme**, with prose around it,
+rather than executable blocks scattered through the document. Simpler to validate and much harder to get
+subtly wrong.
+
+**4. Do not hold the write transaction open during parsing.** The proposal said parse and expand inside
+one transaction. SQLite allows a single writer, so parsing inside it blocks every other write for no
+benefit. Parse and validate first, then persist the document and its compiled rows in a short transaction,
+checking the conditions that genuinely depend on database state inside it.
+
+And validation was hand-waved. Valid yaml is nowhere near a valid programme. It has to check that every
+exercise id exists, that set counts and rep ranges are sane, that week definitions are complete, that
+unrecognised fields are rejected rather than ignored, and that the document cannot expand unboundedly. Use
+an off-the-shelf yaml parser in strict mode with duplicate-key detection, and write the domain checks
+here.
+
+Storing source text alongside compiled rows is safe **only** while the rows are derived and cannot be
+edited independently. Two independently editable representations would be the actual problem.
+
+## The real gap Astra found: nobody specified what activation means
+
+The proposal specified storage and skipped the semantics. That is the weaker half and Astra was right to
+lead with it. What follows is what the repository already settles, and what remains open.
+
+### Already handled, with references
+
+**A programme changing during a workout cannot affect that workout.** `WorkoutExercise` copies the entire
+prescription at instantiation (`target_sets`, rep range, `target_rir`, `suggested_weight_kg`,
+`target_reps_by_set`, `target_tempo`, `reason`, `rationale`, `flags`, `constraint_notes`) and the running
+session never re-reads the template. See `packages/core/src/types.ts`, the stored prescription block.
+
+**Historical versions are genuinely immutable.** `template_exercises` is keyed by
+`(template_id, template_version)`, and `PATCH /templates/:id` inserts new rows at `version + 1` rather
+than updating in place (`apps/api/src/routes/templates.ts`). A workout records `template_id` and
+`template_version`, so an old session points at the rows it actually ran. Astra's concern that a recorded
+version id is insufficient if the rows can change is answered: they cannot.
+
+**Late-arriving sets attach to their original session.** A set belongs to a `workout_exercise_id`, which
+carries its own frozen prescription. Nothing reinterprets it against the current programme.
+
+**Sync retries cannot duplicate.** Every create accepts a client-supplied UUID and returns the existing
+row on a repeat (`docs/API.md`, idempotent creates).
+
+### Genuinely open, and these block the design
+
+1. **What accepting a programme does to the current block.** Nothing decides whether acceptance continues
+   from the present week or restarts the block. Astra is right that a document revision must never
+   silently reset the week, and right that it should be an explicit choice at acceptance. Undecided.
+2. **Stale proposals.** There is no proposal layer at all yet, so nothing marks a proposal stale when a
+   newer one is accepted first. Acceptance must apply to the exact version that was reviewed and must
+   fail if the active programme moved underneath it. Astra's suggestion of HTTP conditional requests,
+   an ETag on the active programme and `If-Match` on acceptance, is a clean standard mechanism for this.
+3. **Starting a session offline.** Today the client must be online to start a session, because the
+   prescription is computed server-side (`docs/PAGES.md`, offline logging and sync). Astra's requirement
+   of a complete cached accepted version that keeps its identity through sync is not met and would be a
+   real piece of work. This is a pre-existing gap rather than one this proposal creates, but it is now
+   written down.
+
+## On the permission boundary
+
+Astra and chalk agree, and Astra sharpened the wording. The coach reads training data and submits
+programme proposals. The user alone activates. A coach credential must not be able to activate a version,
+alter a recorded set, change engine rules, or remove a physio constraint.
+
+Astra's warning is worth quoting in effect: an agent with unrestricted access to the production database
+or to the code is not restricted to proposals merely because its instructions say so. That is the same
+reason `docs/API.md` says token scope is the enforcement rather than the plan.
+
+The sharpest sentence in the review is the boundary statement, and it is better than the one in
+`docs/API.md`: **programme changes legitimately affect future loads, through exercises, rep targets and
+effort targets. The enforceable boundary is that the coach changes permitted programme inputs, while the
+engine calculates the loads and independently enforces the constraints.**
+
+## Revised build order
+
+Astra's, adopted. File import, validation, immutable versions, a review that shows what actually changed,
+and explicit activation. Defer the editor. Settle the activation semantics above before choosing
+endpoints.
+
+Still parked until David says otherwise.
