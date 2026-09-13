@@ -62,6 +62,12 @@ Decisions already made that bind this page.
   "Skip" next to the rest timer is now "End rest" for the same reason, since it only ever cleared the
   timer and could have read as skipping a set.
 - **Weight and reps are both targets and both lead.** On an exercise with no load, the reps lead alone.
+- **The weight and reps values are tappable, not just the plus and minus.** David, 13 September. The
+  steppers stay for a nudge of one increment, and tapping the number itself opens a list so a large change
+  does not cost eight taps. **Not actioned yet, at his instruction, because Lyra is doing a design pass on
+  this page.** One thing to settle when it is built: what the list contains. The plate grid around the
+  current value is the obvious answer, and the weights he has actually used on that exercise recently is
+  probably the more useful one.
 - **The app is kind, and this page is where that is tested.** See the tone section in
   `docs/HOUSE-STYLE.md`. Every state on this screen that could read as failure (a dropped load, a stall, a
   session marked compromised, a held progression) says what happens next rather than what went wrong.
