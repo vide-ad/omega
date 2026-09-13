@@ -4,6 +4,9 @@
 still working out how it should sit in a database. Nothing on this page is decided, including chalk's
 recommendation below, and nobody should treat it as a spec until he unparks it.
 
+**Chalk's proposed engineering answer is at the bottom of this page, written 13 September at David's
+request. It is a proposal awaiting his yes, not a decision.**
+
 **Parking it blocks nothing.** Flint's queue (issues 9, 11, 12 and the Strong importer) does not touch it.
 Amendment A6, prescribed ramps, is safe to build because it changes what a template can express and that
 is true wherever templates come from. Pages 1, 2 and 3 render whatever a programme produces and do not
@@ -111,3 +114,118 @@ edits to the template tables have to stop.
    size of decision from rewriting a whole block. The `pending_review` layer can hold either, but the line
    is his.
 3. **Does the coach's review run on a schedule, on request, or when the record trips something?**
+
+---
+
+# The proposed engineering answer
+
+Written 13 September 2026 at David's request. **A proposal, not a decision.**
+
+## The thing to notice first
+
+David's four layers describe **two different objects, and he called both of them the file**.
+
+- **The programme.** What he intends to do. Changes every few weeks. One document. Written by an AI, read
+  and argued with by a human. Its value is that a person can read it.
+- **The record.** What actually happened. Changes several times a minute during a session. Tens of
+  thousands of rows. Written by a machine, read by a machine. Its value is that it can be queried.
+
+Those have opposite requirements, and no single storage choice serves both. He half-spotted this himself,
+writing "a tracker (maybe a straight database is better)". It is. Markdown for the programme, a database
+for the record, and the argument is the nature of the data rather than anyone's preference.
+
+The record already exists and needs nothing. Everything below is about the programme.
+
+## The recommendation: the programme is a versioned document in the database, not a file on disk
+
+Store the markdown itself in a `programmes` table, one row per version, with the raw text as a column.
+**On write, parse it and expand it into the `workout_templates`, `template_exercises` and
+`mesocycle_weeks` rows the app already runs on, in the same transaction.** A document that will not parse
+is a rejected write, so nothing changes and the last good programme keeps running.
+
+The app is then unchanged. It still instantiates a session from validated rows, exactly as it does today.
+It never parses markdown, and certainly never in the gym.
+
+**The reason it is not a file on disk is that the coach is remote.** An LLM coach has no filesystem on the
+droplet. If the programme lives at `/srv/omega/programme.md`, giving the coach the ability to edit it means
+giving something shell access, which is a far larger security surface than a scoped API write. As a
+document in the database it is `GET /programme` and `PUT /programme`, and the write gate in `docs/API.md`
+already covers it. That gate was built for precisely this.
+
+Three things fall out for free.
+
+- **Provenance.** Each version has a number, and every workout records which programme version it was
+  instantiated from. When the coach changes something, the record says which sessions ran under which
+  programme. That is the audit trail that makes an AI-written programme trustworthy after the fact.
+- **History.** Old versions are rows, so "what did my programme look like in March" is a query.
+- **No sync problem.** There is one source of truth and one way in.
+
+It is also explicitly **not** in the git repository. The programme is user data that changes weekly. Code
+deploys should not be how David changes his reps.
+
+### What it costs
+
+He cannot open it in a text editor without fetching it first. That is a real ergonomic loss against a
+plain file, and the fix is a small CLI that pulls, opens `$EDITOR`, and pushes back, or eventually an
+editor in the app.
+
+## The format: yaml blocks carry the numbers, prose carries the reasoning
+
+The parser must never guess. So the structured data goes in fenced yaml blocks, which LLMs produce
+reliably, and everything outside them is prose that is stored verbatim and never parsed.
+
+```markdown
+## Day 1, Quads and Pull
+
+### Barbell Back Squat
+```yaml
+sets: 3
+reps: [6, 8]
+rir: 3
+rest: 180
+priority: true
+ramp: [70, 85, 100]
+```
+First because it is the hardest thing in the session and it should get the best of you. The ramp is
+there to let the pattern warm up under load rather than costing you a working set.
+```
+
+The prose under each exercise is the "why is this here" layer David asked for. It is shown on the session
+screen next to the engine's own rationale, and the two are different things: the engine explains today's
+number, the programme explains the exercise.
+
+The block structure (week count, set ramp, effort ramp, deload week) is expressed the same way at the top
+of the document, because otherwise there are two authoring surfaces and they will disagree.
+
+## How the coach fits
+
+The coach reads `GET /programme` and `GET /summary`, which is the document and the record together, which
+is exactly layer four. To change something it writes a **proposed** version. That version is stored and
+compiled but not made active until David accepts it. The existing `pending_review` design is the
+mechanism, and the coach's token scope stays the enforcement.
+
+So the coach can rewrite the programme and cannot touch a single logged set, cannot change a load
+decision, and cannot make anything live on its own.
+
+## Scope, which is smaller than it looks
+
+Three of David's four layers are built. This is layer one plus the gate:
+
+1. A `programmes` table, versioned, with the raw markdown and the parse result.
+2. A parser, which only ever reads fenced yaml and treats everything else as opaque text.
+3. `GET /programme`, `PUT /programme`, and a proposals list.
+4. The accept and reject screen, which is a page David has not seen yet and is not in `docs/PAGES.md`.
+5. The seed rewritten to produce a programme document that compiles to the rows it writes today, so
+   nothing is special-cased.
+
+Not a rewrite. A table, a parser, two endpoints and a screen.
+
+## What chalk is least sure about
+
+**Whether the prose should be per exercise or per session.** Per exercise keeps the reason next to the
+numbers, which is why it is proposed. Per session reads better as a document. This is a writing question
+more than an engineering one and David will know the answer once he sees one.
+
+**Whether the coach should propose a whole document or a diff.** A whole document is far simpler to
+validate and to reason about. A diff is easier to review. Proposing whole documents and rendering the diff
+for review gets both, but rendering a useful markdown diff on a phone is real work.
